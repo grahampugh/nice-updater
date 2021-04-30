@@ -46,7 +46,7 @@ writelog "Deleting NiceUpdater LaunchDaemons..."
 writelog "Deleting NiceUpdater Preferences..."
 
 # Delete the main preferences file
-[[ -e "$preferenceFileFullPath" ]] && rm -f "$preferenceFileName"
+[[ -e "$preferenceFileFullPath" ]] && rm -f "$preferenceFileFullPath"
 # Delete the watch path preferences file
 [[ -e "$watchPathsPlist" ]] && rm -f "$watchPathsPlist"
 
