@@ -1,17 +1,12 @@
 #!/bin/bash
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
-mainOnDemandDaemonPlist="/Library/LaunchDaemons/com.github.grahampugh.nice_updater_on_demand.plist"
-watchPathsPlist="/Library/Preferences/com.github.grahampugh.nice_updater.trigger.plist"
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
 
 ###### Variables below this point are not intended to be modified #####
 helperTitle=$(defaults read "$preferenceFileFullPath" UpdateRequiredTitle)
 helperDesc=$(defaults read "$preferenceFileFullPath" UpdateRequiredMessage)
 alertTimeout=$(defaults read "$preferenceFileFullPath" AlertTimeout)
-updateInProgressTitle=$(defaults read "$preferenceFileFullPath" UpdateInProgressTitle)
-updateInProgressMessage=$(defaults read "$preferenceFileFullPath" UpdateInProgressMessage)
-loginAfterUpdatesInProgressMessage=$(defaults read "$preferenceFileFullPath" LoginAfterUpdatesInProgressMessage)
 log=$(defaults read "$preferenceFileFullPath" Log)
 afterFullUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterFullUpdateDelayDayCount)
 afterEmptyUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount)
@@ -19,17 +14,16 @@ maxNotificationCount=$(defaults read "$preferenceFileFullPath" MaxNotificationCo
 iconCustomPath=$(defaults read "$preferenceFileFullPath" IconCustomPath)
 
 scriptName=$(basename "$0")
-osVersion=$(sw_vers -productVersion)
-osMinorVersion=$(echo "$osVersion" | awk -F. '{print $2}')
-osReleaseVersion=$(echo "$osVersion" | awk -F. '{print $3}')
 JAMFHELPER="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
 
 # set default icon if not included in build
+system_build=$( /usr/bin/sw_vers -buildVersion )
+major_version=${system_build:0:2}
 if [[ -f "$iconCustomPath" ]]; then
     icon="$iconCustomPath"
-elif [[ "$osMinorVersion" -le 12 ]]; then
+elif [[ "$major_version" -le 16 ]]; then
     icon="/System/Library/CoreServices/Software Update.app/Contents/Resources/SoftwareUpdate.icns"
-elif [[ "$osMinorVersion" -ge 13 ]]; then
+elif [[ "$major_version" -ge 17 ]]; then
     icon="/System/Library/CoreServices/Install Command Line Developer Tools.app/Contents/Resources/SoftwareUpdate.icns"
 fi
 
@@ -45,7 +39,7 @@ finish() {
 }
 
 random_delay() {
-    delay_time=$(( (RANDOM % 300)+1 ))
+    delay_time=$(( (RANDOM % 60)+1 ))
     writelog "Delaying software update check by ${delay_time}s."
     sleep ${delay_time}s
 }
@@ -63,37 +57,20 @@ record_last_full_update() {
     /usr/libexec/PlistBuddy -c "Add :update_key array" $preferenceFileFullPath 2> /dev/null
 }
 
-initiate_restart() {
-    writelog "Initiating $restartType now..."
-    kill "$jamfHelperPID" > /dev/null 2>&1 && wait $! > /dev/null
-    if [[ "$restartType" = "restart" ]]; then
-        /usr/local/bin/jamf reboot -background -immediately | while read -r LINE; do writelog "$LINE"; done
-        finish 0
-    elif [[ "$restartType" = "shutdown" ]]; then
-        /sbin/halt | while read -r LINE; do writelog "$LINE"; done
-        finish 0
-    fi
-}
-
 trigger_nonrestart_updates() {
-    [[ "$osMinorVersion" -ge 11 ]] && noScan='--no-scan'
-    /usr/sbin/softwareupdate --install "$1" "$noScan"
+    /usr/sbin/softwareupdate --install "$1" 
 }
 
-trigger_updates() {
-    # Run softwareupdate and clean up the output so we only see what is necessary.
-    # 10.11 and above allows you to skip the update scan, so we can do that since we already scanned for updates initially
-    [[ "$osMinorVersion" -ge 11 ]] && noScan='--no-scan'
-    # shellcheck disable=SC2086
-    updateOutput=$(/usr/sbin/softwareupdate --install $1 "$noScan" | \
-        grep --line-buffered -v -E 'Software Update Tool|Copyright|Finding|Downloaded|Done\.|You have installed one|Please restart immediately\.|select Shut Down from the Apple menu|^$' | \
-        while read -r LINE; do writelog "$LINE"; done)
-    if [[ "$updateOutput" =~ "select Shut Down from the Apple menu" ]]; then
-        restartType="shutdown"
-    else
-        restartType="restart"
-    fi
-    sleep 5
+open_software_update() {
+    /usr/bin/open -W /System/Library/PreferencePanes/SoftwareUpdate.prefPane &
+    suPID=$!
+    writelog "Software Update PID $suPID"
+    # While Software Update is open...
+    while kill -0 $suPID 2> /dev/null; do
+        sleep 1
+    done
+    writelog "Software Update was closed"
+    was_closed=1
 }
 
 compare_date() {
@@ -109,20 +86,6 @@ alert_user() {
     local subtitle="$1"
     [[ "$notificationsLeft" == "1" ]] && local subtitle="1 remaining alert before auto-install."
     [[ "$notificationsLeft" == "0" ]] && local subtitle="No deferrals remaining! Click on \"Install Now\" to proceed"
-
-    writelog "Stopping NiceUpdater On-Demand LaunchDaemon..."
-    launchctl unload -w "$mainOnDemandDaemonPlist"
-
-    writelog "Generating NiceUpdater Update Key..."
-    updateKey=$(< /dev/urandom env LC_CTYPE=C tr -dc a-zA-Z0-9 | head -c 16; echo)
-    /usr/libexec/PlistBuddy -c "Add :update_key array" $preferenceFileFullPath 2> /dev/null
-    /usr/bin/plutil -insert update_key.0 -string "$updateKey" $preferenceFileFullPath
-
-    writelog "Clearing NiceUpdater On-Demand Trigger file..."
-    /usr/libexec/PlistBuddy -c "Delete :update_key" $watchPathsPlist 2> /dev/null
-
-    writelog "Restarting NiceUpdater On-Demand LaunchDaemon..."
-    launchctl load -w "$mainOnDemandDaemonPlist"
 
     if /usr/bin/pgrep jamfHelper ; then
     writelog "Existing JamfHelper window running... killing"
@@ -161,10 +124,11 @@ alert_user() {
             writelog "A button was pressed."
         fi
     fi
+
     # writelog "Response: $helperExitCode"
     if [[ $helperExitCode == 0 ]]; then
         writelog "User initiated installation."
-        defaults write $watchPathsPlist update_key "$updateKey"
+        open_software_update
     elif [[ $helperExitCode == 2 ]]; then
         writelog "User cancelled installation."
     else
@@ -176,21 +140,14 @@ alert_user() {
     /usr/libexec/PlistBuddy -c "Delete :users:$loggedInUser" $preferenceFileFullPath 2> /dev/null
     /usr/libexec/PlistBuddy -c "Add :users:$loggedInUser dict" $preferenceFileFullPath
     /usr/libexec/PlistBuddy -c "Add :users:$loggedInUser:alert_count integer $notificationCount" $preferenceFileFullPath
+
 }
 
 alert_logic() {
     notificationCount=$(/usr/libexec/PlistBuddy -c "Print :users:$loggedInUser:alert_count" $preferenceFileFullPath 2> /dev/null | xargs)
     if [[ "$notificationCount" -ge "$maxNotificationCount" ]]; then
         writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer."
-        "$JAMFHELPER" -windowType utility -lockHUD -title "$updateInProgressTitle" -alignHeading center -alignDescription natural -description "$updateInProgressMessage" -icon "$icon" -iconSize 100 &
-        jamfHelperPID=$(echo $!)
-        writelog "Installing updates that DO require a restart..."
-        triggerOptions="--recommended"
-        [[ "$osMinorVersion" -ge 14 || ("$osMinorVersion" -eq 13 && "$osReleaseVersion" -ge 4) ]] && triggerOptions+=" --restart"
-        trigger_updates "$triggerOptions"
-
-        record_last_full_update
-        initiate_restart
+        alert_user "$notificationsLeft remaining alerts before auto-install." "$notificationCount"
     else
         ((notificationCount++))
         notificationsLeft="$((maxNotificationCount - notificationCount))"
@@ -200,6 +157,7 @@ alert_logic() {
 }
 
 update_check() {
+    osVersion=$( /usr/bin/sw_vers -productVersion )
     writelog "Determining available Software Updates for macOS $osVersion..."
     updates=$(/usr/sbin/softwareupdate -l)
     updatesNoRestart=$(echo "$updates" | grep -v restart | grep -B1 recommended | grep -v recommended | grep -v "\-\-" | sed 's|.*\* ||g')
@@ -209,8 +167,7 @@ update_check() {
     if [[ "$updateCount" -gt "0" ]]; then
         # Download the updates
         writelog "Downloading $updateCount update(s)..."
-        [[ "$osMinorVersion" -ge 11 ]] && noScan='--no-scan'
-        /usr/sbin/softwareupdate --download --recommended "$noScan" | grep --line-buffered Downloaded | while read -r LINE; do writelog "$LINE"; done
+        /usr/sbin/softwareupdate --download --recommended | grep --line-buffered Downloaded | while read -r LINE; do writelog "$LINE"; done
 
         # Don't waste the user's time - install any updates that do not require a restart first.
         if [[ -n "$updatesNoRestart" ]]; then
@@ -224,28 +181,19 @@ update_check() {
         # If the script moves past this point, a restart is required.
         if [[ -n "$updatesRestart" ]]; then
             writelog "A restart is required for remaining updates."
-
             # If no user is logged in, just update and restart. Check the user now as some time has past since the script began.
             loggedInUser=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
             # loggedInUID=$(id -u "$loggedInUser")
             if [[ "$loggedInUser" == "root" ]] || [[ -z "$loggedInUser" ]]; then
-                writelog "No user logged in."
-                writelog "Installing updates that DO require a restart..."
-                trigger_updates "--recommended --restart"
-                record_last_full_update
-                # Some time has passed since we started to install the updates, check for a logged in user once more
-                loggedInUser=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
-                if [[ ! "$loggedInUser" == "root" ]] && [[ -n "$loggedInUser" ]]; then
-                    writelog "$loggedInUser has logged in since we started to install updates, alerting them of pending restart."
-                    "$JAMFHELPER" -windowType utility -lockHUD -title "$updateInProgressTitle" -alignHeading center -alignDescription natural -description "$loginAfterUpdatesInProgressMessage" -icon "$icon" -iconSize 100 -timeout "60"
-                    initiate_restart
-                else
-                    # Still nobody is logged in, restart
-                    initiate_restart
-                fi
+                writelog "No user logged in. Cannot proceed."
+            else
+                # Getting here means a user is logged in, alert them that they will need to install and restart
+                alert_logic
+                # repeat if software update was closed
+                while [[ $was_closed = 1 ]]; do
+                    alert_logic
+                done
             fi
-            # Getting here means a user is logged in, alert them that they will need to install and restart
-            alert_logic
         else
             record_last_full_update
             writelog "No updates that require a restart available; exiting."
@@ -256,31 +204,6 @@ update_check() {
         /usr/libexec/PlistBuddy -c "Delete :last_empty_update_time" $preferenceFileFullPath 2> /dev/null
         /usr/libexec/PlistBuddy -c "Add :last_empty_update_time string $(date +%Y-%m-%d\ %H:%M:%S)" $preferenceFileFullPath
         /usr/libexec/PlistBuddy -c "Delete :users" $preferenceFileFullPath 2> /dev/null
-        finish 0
-    fi
-}
-
-on_demand() {
-    # This function is intended to be run from a LaunchDaemon using WatchPaths that is triggered when the user
-    # clicks the "Install now" at a generated prompt. A randomized key is inserted simultaneously in both the
-    # WatchPaths file and a seperate preference file, and when confirmed for a match here, it is allowed to run.
-    # This elimantes any accidental runs if the WatchPaths file gets modified for any reason.
-
-    writelog " "
-    writelog "======== Starting $scriptName ========"
-    writelog "Verifying On-Demand Update Key..."
-    storedUpdateKeys=$(/usr/libexec/PlistBuddy -c "Print update_key" $preferenceFileFullPath | sed -e 1d -e '$d' | sed 's/^ *//')
-    testUpdateKey=$(defaults read $watchPathsPlist update_key)
-    if [[ -n "$testUpdateKey" ]] && [[ "$storedUpdateKeys" == *"$testUpdateKey"* ]]; then
-        writelog "On-Demand Update Key confirmed; continuing."
-        "$JAMFHELPER" -windowType utility -lockHUD -title "$updateInProgressTitle" -alignHeading center -alignDescription natural -description "$updateInProgressMessage" -icon "$icon" -iconSize 100 &
-        jamfHelperPID=$(echo $!)
-        writelog "Installing updates that DO require a restart..."
-        trigger_updates "--recommended --restart"
-        record_last_full_update
-        initiate_restart
-    else
-        writelog "On-Demand Update Key not confirmed; exiting."
         finish 0
     fi
 }
@@ -311,7 +234,7 @@ main() {
             daysSinceLastFullUpdate="$(compare_date "$lastFullUpdateTime")"
             if [[ "$daysSinceLastFullUpdate" -ge "$afterFullUpdateDelayDayCount" ]]; then
                 writelog "$afterFullUpdateDelayDayCount or more days have passed since last full update."
-                # delay script's actions by up to 5 mins to prevent all computers running software update at the same time
+                # delay script's actions by up to 1 min to prevent all computers running software update at the same time
                 random_delay
                 update_check
             else
@@ -322,7 +245,7 @@ main() {
             daysSinceLastEmptyUpdate="$(compare_date "$lastEmptyUpdateTime")"
             if [[ "$daysSinceLastEmptyUpdate" -ge "$afterEmptyUpdateDelayDayCount" ]]; then
                 writelog "$afterEmptyUpdateDelayDayCount or more days have passed since last empty update check."
-                # delay script's actions by up to 5 mins to prevent all computers running software update at the same time
+                # delay script's actions by up to 1 min to prevent all computers running software update at the same time
                 random_delay
                 update_check
             else
@@ -331,7 +254,7 @@ main() {
             fi
         else
             writelog "This device might not have performed a full update yet."
-            # delay script's actions by up to 5 mins to prevent all computers running software update at the same time
+                # delay script's actions by up to 1 min to prevent all computers running software update at the same time
             random_delay
             update_check
         fi

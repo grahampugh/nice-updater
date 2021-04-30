@@ -4,28 +4,16 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="1.7"
+version="2.0"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
 
 # The message that is displayed when software updates are in progress and a user is logged in
-updateRequiredMessage="Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now to begin the installation.
-
-The Mac will restart during installation is complete. Some macOS updates may require multiple restarts and/or the computer may shut down as part of the process."
+updateRequiredMessage="Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now from the Software Update panel to begin the installation."
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateInProgressTitle="Software Update In Progress"
-
-# The message that is displayed when software updates are in progress and a user is logged in
-updateInProgressMessage="Apple Software Updates are being installed now. Please do not turn off this Mac, it will automatically reboot once the installation is complete.
-
-If you see this message for more than 30 minutes please call the Help Desk."
-
-# The message that a user will receive if they login to the Mac WHILE updates are being performed
-loginAfterUpdatesInProgressMessage="Unfortunately you logged in while Apple Software Updates were being installed. This Mac will restart in 60 seconds.
-
-If you have any questions please call the Help Desk."
 
 # The location of your log, keep in mind that if you nest the log into a folder that does not exist you'll need to mkdir -p the directory as well
 log="/Library/Logs/Nice_Updater.log"
@@ -37,7 +25,7 @@ afterFullUpdateDelayDayCount="14"
 afterEmptyUpdateDelayDayCount="3"
 
 # The number of times to alert a single user prior to forcibly installing updates
-maxNotificationCount="11"
+maxNotificationCount="3"
 
 # Calendar based start interval - hours and minutes.
 startIntervalHour="13"   # valid is 0-23. If left blank, daemon will launch every hour instead of once per day.
@@ -115,8 +103,6 @@ defaults write "$PWD/$onDemandDaemonFileName" Label -string "$onDemandDaemonIden
 defaults write "$PWD/$preferenceFileName" UpdateRequiredTitle -string "$updateRequiredTitle"
 defaults write "$PWD/$preferenceFileName" UpdateRequiredMessage -string "$updateRequiredMessage"
 defaults write "$PWD/$preferenceFileName" UpdateInProgressTitle -string "$updateInProgressTitle"
-defaults write "$PWD/$preferenceFileName" UpdateInProgressMessage -string "$updateInProgressMessage"
-defaults write "$PWD/$preferenceFileName" LoginAfterUpdatesInProgressMessage -string "$loginAfterUpdatesInProgressMessage"
 defaults write "$PWD/$preferenceFileName" Log -string "$log"
 defaults write "$PWD/$preferenceFileName" AfterFullUpdateDelayDayCount -int "$afterFullUpdateDelayDayCount"
 defaults write "$PWD/$preferenceFileName" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
@@ -133,8 +119,8 @@ chmod +x /private/tmp/nice_updater/scripts/postinstall
 cp "$PWD/nice_updater.sh" /private/tmp/nice_updater/files/Library/Scripts/nice_updater.sh
 cp "$PWD/nice_updater_uninstall.sh" /private/tmp/nice_updater/files/Library/Scripts/nice_updater_uninstall.sh
 
-# put a custom icon in place if present
-if find $PWD/custom_icon -name *.png ; then
+# put a custom icon in place if present
+if find "$PWD/custom_icon" -name "*.png" ; then
     icon_path=/Library/Scripts/nice_updater_custom_icon.png
     echo "Adding the icon to /private/tmp/nice_updater/files$icon_path"
     cp -f "$PWD/custom_icon/"*.png /private/tmp/nice_updater/files$icon_path

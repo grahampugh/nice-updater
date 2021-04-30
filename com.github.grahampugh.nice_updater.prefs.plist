@@ -8,26 +8,14 @@
 	<integer>14</integer>
 	<key>AlertTimeout</key>
 	<integer>3540</integer>
-	<key>IconCustomPath</key>
-	<string>/Library/Scripts/nice_updater_custom_icon.png</string>
 	<key>Log</key>
 	<string>/Library/Logs/Nice_Updater.log</string>
-	<key>LoginAfterUpdatesInProgressMessage</key>
-	<string>Unfortunately you logged in while Apple Software Updates were being installed. This Mac will restart in 60 seconds.
-
-If you have any questions please call the Help Desk.</string>
 	<key>MaxNotificationCount</key>
-	<integer>11</integer>
-	<key>UpdateInProgressMessage</key>
-	<string>Apple Software Updates are being installed now. Please do not turn off this Mac, it will automatically reboot once the installation is complete.
-
-If you see this message for more than 30 minutes please call the Help Desk.</string>
+	<integer>3</integer>
 	<key>UpdateInProgressTitle</key>
 	<string>Software Update In Progress</string>
 	<key>UpdateRequiredMessage</key>
-	<string>Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now to begin the installation.
-
-The Mac will restart during installation is complete. Some macOS updates may require multiple restarts and/or the computer may shut down as part of the process.</string>
+	<string>Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now from the Software Update panel to begin the installation.</string>
 	<key>UpdateRequiredTitle</key>
 	<string>macOS Software Updates Required</string>
 </dict>
