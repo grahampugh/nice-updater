@@ -65,7 +65,8 @@ Changed the default button of the jamfHelper dialogs to Cancel, because after ti
 
 Also shortened the timeout to 82800 from 99999 seconds to prevent overlap of two days' dialogs.
 
-[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.0...HEAD
+[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/grahampugh/nice-updater/compare/v2.0...v2.0.1
 [2.0]: https://github.com/grahampugh/nice-updater/compare/1.8...v2.0
 [1.8]: https://github.com/grahampugh/nice-updater/compare/1.7...1.8
 [1.7]: https://github.com/grahampugh/nice-updater/compare/1.6...1.7
