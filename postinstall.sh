@@ -8,8 +8,6 @@ preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.
 # Set permissions on LaunchDaemon and Script
 chown root:wheel "$mainDaemonPlist"
 chmod 644 "$mainDaemonPlist"
-chown root:wheel "$mainOnDemandDaemonPlist"
-chmod 644 "$mainOnDemandDaemonPlist"
 chown root:wheel "$preferenceFileFullPath"
 chmod 644 "$preferenceFileFullPath"
 chown root:wheel /Library/Scripts/nice_updater.sh

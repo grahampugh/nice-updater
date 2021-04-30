@@ -58,4 +58,11 @@ writelog "Deleting NiceUpdater files..."
 [[ -e "$scriptPath" ]] && rm -f "$scriptPath"
 [[ -e "$uninstallScriptPath" ]] && rm -f "$uninstallScriptPath"
 
+writelog "Forgetting the package..."
+
+# Find any packages and remove them
+if pkgutil --pkgs=$identifier ; then
+    pkgutil --forget $identifier
+fi
+
 finish 0

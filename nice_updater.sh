@@ -191,6 +191,7 @@ update_check() {
                 alert_logic
                 # repeat if software update was closed
                 while [[ $was_closed = 1 ]]; do
+                    random_delay
                     alert_logic
                 done
             fi
