@@ -8,10 +8,12 @@
 	<integer>14</integer>
 	<key>AlertTimeout</key>
 	<integer>3540</integer>
+	<key>IconCustomPath</key>
+	<string>/Library/Scripts/nice_updater_custom_icon.png</string>
 	<key>Log</key>
 	<string>/Library/Logs/Nice_Updater.log</string>
 	<key>MaxNotificationCount</key>
-	<integer>3</integer>
+	<integer>10</integer>
 	<key>UpdateInProgressTitle</key>
 	<string>Software Update In Progress</string>
 	<key>UpdateRequiredMessage</key>

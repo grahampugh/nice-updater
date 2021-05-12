@@ -4,6 +4,13 @@
 
 No date
 
+## [2.0.2]
+
+12.05.2021
+
+- Runs `jamfHelper` as the current user (this may not be necessary - was introduced to try and fix a problem where the tool was not showing though was running).
+- Changed default defer count (back) to 10.
+
 ## [2.0.1]
 
 30.04.2021

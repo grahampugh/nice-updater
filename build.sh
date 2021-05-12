@@ -4,7 +4,7 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.0.1"
+version="2.0.2"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
@@ -25,7 +25,7 @@ afterFullUpdateDelayDayCount="14"
 afterEmptyUpdateDelayDayCount="3"
 
 # The number of times to alert a single user prior to forcibly installing updates
-maxNotificationCount="3"
+maxNotificationCount="10"
 
 # Calendar based start interval - hours and minutes.
 startIntervalHour="13"   # valid is 0-23. If left blank, daemon will launch every hour instead of once per day.

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Nice Updater 2
+version="2.0.2"
+
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
 
@@ -15,6 +18,7 @@ iconCustomPath=$(defaults read "$preferenceFileFullPath" IconCustomPath)
 
 scriptName=$(basename "$0")
 JAMFHELPER="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
+current_user=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
 
 # set default icon if not included in build
 system_build=$( /usr/bin/sw_vers -buildVersion )
@@ -64,7 +68,7 @@ trigger_nonrestart_updates() {
 open_software_update() {
     /usr/bin/open -W /System/Library/PreferencePanes/SoftwareUpdate.prefPane &
     suPID=$!
-    writelog "Software Update PID $suPID"
+    writelog "Software Update PID: $suPID"
     # While Software Update is open...
     while kill -0 $suPID 2> /dev/null; do
         sleep 1
@@ -95,10 +99,11 @@ alert_user() {
 
     writelog "Notifying $loggedInUser of available updates..."
     if [[ "$notificationsLeft" == "0" ]]; then
-        helperExitCode=$( "$JAMFHELPER" -windowType utility -lockHUD -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -defaultButton 1 -icon "$icon" -iconSize 100 )
+        helperExitCode=$( sudo -u "$current_user" "$JAMFHELPER" -windowType utility -lockHUD -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -defaultButton 1 -icon "$icon" -iconSize 100 )
     else
-        "$JAMFHELPER" -windowType utility -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -button2 "Cancel" -defaultButton 2 -cancelButton 2 -icon "$icon" -iconSize 100 &
+        sudo -u "$current_user" "$JAMFHELPER" -windowType utility -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -button2 "Cancel" -defaultButton 2 -cancelButton 2 -icon "$icon" -iconSize 100 &
         jamfHelperPID=$!
+        writelog "jamfHelper PID: $jamfHelperPID"
         # since the "cancel" exit code is the same as the timeout exit code, we
         # need to distinguish between the two. We use a while loop that checks
         # that the process exists every second. If so, count down 1 and check
@@ -144,6 +149,7 @@ alert_user() {
 }
 
 alert_logic() {
+    was_closed=0
     notificationCount=$(/usr/libexec/PlistBuddy -c "Print :users:$loggedInUser:alert_count" $preferenceFileFullPath 2> /dev/null | xargs)
     if [[ "$notificationCount" -ge "$maxNotificationCount" ]]; then
         writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer."
@@ -213,7 +219,7 @@ main() {
     # This function is intended to be run from a LaunchDaemon at intervals
 
     writelog " "
-    writelog "======== Starting $scriptName ========"
+    writelog "======== Starting $scriptName v$version ========"
 
     # See if we are blocking updates, if so exit
     updatesBlocked=$(/usr/libexec/PlistBuddy -c "Print :updates_blocked" $preferenceFileFullPath 2> /dev/null | xargs 2> /dev/null)
