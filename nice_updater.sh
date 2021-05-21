@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.0.2"
+version="2.0.3"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -152,6 +152,7 @@ alert_logic() {
     was_closed=0
     notificationCount=$(/usr/libexec/PlistBuddy -c "Print :users:$loggedInUser:alert_count" $preferenceFileFullPath 2> /dev/null | xargs)
     if [[ "$notificationCount" -ge "$maxNotificationCount" ]]; then
+        notificationsLeft="$((maxNotificationCount - notificationCount))"
         writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer."
         alert_user "$notificationsLeft remaining alerts before auto-install." "$notificationCount"
     else
