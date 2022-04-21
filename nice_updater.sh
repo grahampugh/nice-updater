@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.0.3"
+version="2.1.0"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -11,6 +11,7 @@ helperTitle=$(defaults read "$preferenceFileFullPath" UpdateRequiredTitle)
 helperDesc=$(defaults read "$preferenceFileFullPath" UpdateRequiredMessage)
 alertTimeout=$(defaults read "$preferenceFileFullPath" AlertTimeout)
 log=$(defaults read "$preferenceFileFullPath" Log)
+EAFile=$(defaults read "$preferenceFileFullPath" EAFile)
 afterFullUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterFullUpdateDelayDayCount)
 afterEmptyUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount)
 maxNotificationCount=$(defaults read "$preferenceFileFullPath" MaxNotificationCount)
@@ -37,32 +38,32 @@ writelog() {
     /bin/echo "$DATE" " $1" >> "$log"
 }
 
+write_status() {
+    /bin/echo "$1" > "$EAFile"
+}
+
 finish() {
     writelog "======== Finished $scriptName ========"
     exit "$1"
 }
 
 random_delay() {
-    delay_time=$(( (RANDOM % 60)+1 ))
-    writelog "Delaying software update check by ${delay_time}s."
-    sleep ${delay_time}s
+    delay_time=$(( (RANDOM % 10)+1 ))
+    writelog "Delaying software update check by ${delay_time}s"
+    # sleep ${delay_time}
 }
 
 record_last_full_update() {
-    writelog "Done with update process; recording last full update time."
+    writelog "Done with update process; recording last full update time"
     /usr/libexec/PlistBuddy -c "Delete :last_full_update_time" $preferenceFileFullPath 2> /dev/null
     /usr/libexec/PlistBuddy -c "Add :last_full_update_time string $(date +%Y-%m-%d\ %H:%M:%S)" $preferenceFileFullPath
 
-    writelog "Clearing user alert data."
+    writelog "Clearing user alert data"
     /usr/libexec/PlistBuddy -c "Delete :users" $preferenceFileFullPath
 
-    writelog "Clearing On-Demand Update Key."
+    writelog "Clearing On-Demand Update Key"
     /usr/libexec/PlistBuddy -c "Delete :update_key" $preferenceFileFullPath 2> /dev/null
     /usr/libexec/PlistBuddy -c "Add :update_key array" $preferenceFileFullPath 2> /dev/null
-}
-
-trigger_nonrestart_updates() {
-    /usr/sbin/softwareupdate --install "$1" 
 }
 
 open_software_update() {
@@ -74,6 +75,7 @@ open_software_update() {
         sleep 1
     done
     writelog "Software Update was closed"
+    write_status "Software Update was closed"
     was_closed=1
 }
 
@@ -88,7 +90,7 @@ compare_date() {
 
 alert_user() {
     local subtitle="$1"
-    [[ "$notificationsLeft" == "1" ]] && local subtitle="1 remaining alert before auto-install."
+    [[ "$notificationsLeft" == "1" ]] && local subtitle="1 remaining deferral"
     [[ "$notificationsLeft" == "0" ]] && local subtitle="No deferrals remaining! Click on \"Install Now\" to proceed"
 
     if /usr/bin/pgrep jamfHelper ; then
@@ -126,18 +128,21 @@ alert_user() {
             pkill jamfHelper
             helperExitCode=1
         else
-            writelog "A button was pressed."
+            writelog "A button was pressed"
         fi
     fi
 
     # writelog "Response: $helperExitCode"
     if [[ $helperExitCode == 0 ]]; then
-        writelog "User initiated installation."
+        writelog "User initiated installation"
+        write_status "User initiated installation"
         open_software_update
     elif [[ $helperExitCode == 2 ]]; then
-        writelog "User cancelled installation."
+        writelog "User cancelled installation"
+        write_status "User cancelled installation"
     else
-        writelog "Alert timed out without response."
+        writelog "Alert timed out without response"
+        write_status "Alert timed out without response"
         ((notificationCount--))
     fi
 
@@ -154,45 +159,59 @@ alert_logic() {
     if [[ "$notificationCount" -ge "$maxNotificationCount" ]]; then
         notificationsLeft="$((maxNotificationCount - notificationCount))"
         writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer."
-        alert_user "$notificationsLeft remaining alerts before auto-install." "$notificationCount"
+        alert_user "$notificationsLeft remaining deferrals." "$notificationCount"
     else
         ((notificationCount++))
         notificationsLeft="$((maxNotificationCount - notificationCount))"
-        writelog "$notificationsLeft remaining alerts before auto-install."
-        alert_user "$notificationsLeft remaining alerts before auto-install." "$notificationCount"
+        writelog "$notificationsLeft remaining deferrals."
+        alert_user "$notificationsLeft remaining deferrals." "$notificationCount"
     fi
 }
 
 update_check() {
     osVersion=$( /usr/bin/sw_vers -productVersion )
     writelog "Determining available Software Updates for macOS $osVersion..."
-    updates=$(/usr/sbin/softwareupdate -l)
-    updatesNoRestart=$(echo "$updates" | grep -v restart | grep -B1 recommended | grep -v recommended | grep -v "\-\-" | sed 's|.*\* ||g')
-    updatesRestart=$(echo "$updates" | grep -i restart | grep -v '\*' | cut -d , -f 1)
-    updateCount=$(echo "$updates" | grep -i -c recommended)
+    update_file="/tmp/nice_updater_updates.txt"
+    /usr/sbin/softwareupdate --list > "$update_file"
+
+    # create list of updates that do not require a restart
+    updatesNoRestart=()
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            updatesNoRestart+=("$line")
+            writelog "Added '$line' to list of updates that do not require a restart"
+        fi
+    done <<< "$(grep -v restart "$update_file" | grep -B1 'Recommended: YES' | grep -v -i Recommended | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
+
+    # create list of updates that do require a restart
+    updatesRestart=()
+    while IFS= read -r line; do
+        if [[ -n "$line" ]]; then
+            updatesRestart+=("$line")
+            writelog "Added '$line' to list of updates that require a restart"
+        fi
+    done <<< "$(grep -B1 'Recommended: YES, Action: restart' "$update_file" | grep -v restart | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
+
+    updateCount=$(grep -c "Recommended: YES" "$update_file")
 
     if [[ "$updateCount" -gt "0" ]]; then
         # Download the updates
-        writelog "Downloading $updateCount update(s)..."
-        /usr/sbin/softwareupdate --download --recommended | grep --line-buffered Downloaded | while read -r LINE; do writelog "$LINE"; done
+        # writelog "Downloading $updateCount update(s)..."
+        # /usr/sbin/softwareupdate --download "${updatesNoRestart[@]}" | grep --line-buffered Downloaded | while read -r LINE; do writelog "$LINE"; done
 
-        # Don't waste the user's time - install any updates that do not require a restart first.
-        if [[ -n "$updatesNoRestart" ]]; then
+        # install any updates that do not require a restart, as these do not require authentication.
+        if [[ "${#updatesNoRestart[@]}" -gt 0 ]]; then
             writelog "Installing updates that DO NOT require a restart in the background..."
-            while IFS='' read -r line; do
-                writelog "Updating: $line"
-                trigger_nonrestart_updates "$line"
-            done <<< "$updatesNoRestart"
+            /usr/sbin/softwareupdate --install "${updatesNoRestart[@]}"
         fi
 
         # If the script moves past this point, a restart is required.
-        if [[ -n "$updatesRestart" ]]; then
-            writelog "A restart is required for remaining updates."
-            # If no user is logged in, just update and restart. Check the user now as some time has past since the script began.
+        if [[ "${#updatesRestart[@]}" -gt 0 ]]; then
+            writelog "A restart is required for remaining updates"
+            # Abort if no user is logged in. Check the user now as some time has past since the script began.
             loggedInUser=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
-            # loggedInUID=$(id -u "$loggedInUser")
             if [[ "$loggedInUser" == "root" ]] || [[ -z "$loggedInUser" ]]; then
-                writelog "No user logged in. Cannot proceed."
+                writelog "No user logged in. Cannot proceed"
             else
                 # Getting here means a user is logged in, alert them that they will need to install and restart
                 alert_logic
@@ -204,11 +223,13 @@ update_check() {
             fi
         else
             record_last_full_update
-            writelog "No updates that require a restart available; exiting."
+            writelog "No updates that require a restart available; exiting"
+            write_status "No updates that require a restart available; exiting"
             finish 0
         fi
     else
-        writelog "No updates at this time; exiting."
+        writelog "No updates at this time; exiting"
+        write_status "No updates at this time; exiting"
         /usr/libexec/PlistBuddy -c "Delete :last_empty_update_time" $preferenceFileFullPath 2> /dev/null
         /usr/libexec/PlistBuddy -c "Add :last_empty_update_time string $(date +%Y-%m-%d\ %H:%M:%S)" $preferenceFileFullPath
         /usr/libexec/PlistBuddy -c "Delete :users" $preferenceFileFullPath 2> /dev/null
@@ -225,7 +246,8 @@ main() {
     # See if we are blocking updates, if so exit
     updatesBlocked=$(/usr/libexec/PlistBuddy -c "Print :updates_blocked" $preferenceFileFullPath 2> /dev/null | xargs 2> /dev/null)
     if [[ "$updatesBlocked" == "true" ]]; then
-        writelog "Updates are blocked for this client at this time; exiting."
+        writelog "Updates are blocked for this client at this time; exiting"
+        write_status "Updates are blocked for this client at this time; exiting"
         finish 0
     fi
 
@@ -241,27 +263,29 @@ main() {
         if [[ -n "$lastFullUpdateTime" ]]; then
             daysSinceLastFullUpdate="$(compare_date "$lastFullUpdateTime")"
             if [[ "$daysSinceLastFullUpdate" -ge "$afterFullUpdateDelayDayCount" ]]; then
-                writelog "$afterFullUpdateDelayDayCount or more days have passed since last full update."
+                writelog "$afterFullUpdateDelayDayCount or more days have passed since last full update"
                 # delay script's actions by up to 1 min to prevent all computers running software update at the same time
                 random_delay
                 update_check
             else
-                writelog "Less than $afterFullUpdateDelayDayCount days since last full update; exiting."
+                writelog "Less than $afterFullUpdateDelayDayCount days since last full update; exiting"
+                write_status "Less than $afterFullUpdateDelayDayCount days since last full update; exiting"
                 finish 0
             fi
         elif [[ -n "$lastEmptyUpdateTime" ]]; then
             daysSinceLastEmptyUpdate="$(compare_date "$lastEmptyUpdateTime")"
             if [[ "$daysSinceLastEmptyUpdate" -ge "$afterEmptyUpdateDelayDayCount" ]]; then
-                writelog "$afterEmptyUpdateDelayDayCount or more days have passed since last empty update check."
+                writelog "$afterEmptyUpdateDelayDayCount or more days have passed since last empty update check"
                 # delay script's actions by up to 1 min to prevent all computers running software update at the same time
                 random_delay
                 update_check
             else
-                writelog "Less than $afterEmptyUpdateDelayDayCount days since last empty update check; exiting."
+                writelog "Less than $afterEmptyUpdateDelayDayCount days since last empty update check; exiting"
+                write_status "Less than $afterEmptyUpdateDelayDayCount days since last empty update check; exiting"
                 finish 0
             fi
         else
-            writelog "This device might not have performed a full update yet."
+            writelog "This device might not have performed a full update yet"
                 # delay script's actions by up to 1 min to prevent all computers running software update at the same time
             random_delay
             update_check

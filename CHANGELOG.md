@@ -4,26 +4,37 @@
 
 No date
 
+## [2.1]
+
+21.04.2022
+
+- Remove `softwareupdate` downloading stage as can cause unexpected installation.
+- Bugfix for identifying updates that do not require a restart.
+- New `/Library/Scripts/nice_updater_status.txt` file that can be read by a Jamf Extension Attribute for easy checking of run status.
+- Changed default defer count to 8.
+- Changed default wait after previous update to 7 days.
+- Other minor bugfixes.
+
 ## [2.0.3]
 
 21.05.2021
 
--   Bugfix for issue #1
+- Bugfix for issue #1
 
 ## [2.0.2]
 
 12.05.2021
 
--   Runs `jamfHelper` as the current user (this may not be necessary - was introduced to try and fix a problem where the tool was not showing though was running).
--   Changed default defer count (back) to 10.
+- Runs `jamfHelper` as the current user (this may not be necessary - was introduced to try and fix a problem where the tool was not showing though was running).
+- Changed default defer count (back) to 10.
 
 ## [2.0.1]
 
 30.04.2021
 
--   The uninstaller script now forgets the package.
--   A delay is introduced after a user closes the Software Update pane before bringing the dialog back. This is to primarily prevent the popup showing up while a restart is happening. (Ideally we would be able to check if the restart has been initiated, but that is not happening yet.)
--   Added the CHANGELOG.md file.
+- The uninstaller script now forgets the package.
+- A delay is introduced after a user closes the Software Update pane before bringing the dialog back. This is to primarily prevent the popup showing up while a restart is happening. (Ideally we would be able to check if the restart has been initiated, but that is not happening yet.)
+- Added the CHANGELOG.md file.
 
 ## [2.0]
 
@@ -44,9 +55,9 @@ Also, the last notification message no longer times out after 300s. It will stay
 
 27.08.2019
 
--   Replaced StartInterval with StartCalendarInterval to ensure script starts regularly.
--   Created an uninstaller script
--   Created a post-install script for Jamf which will allow parameters to be overridden in a policy.
+- Replaced StartInterval with StartCalendarInterval to ensure script starts regularly.
+- Created an uninstaller script
+- Created a post-install script for Jamf which will allow parameters to be overridden in a policy.
 
 ## [1.6]
 
@@ -78,7 +89,8 @@ Changed the default button of the jamfHelper dialogs to Cancel, because after ti
 
 Also shortened the timeout to 82800 from 99999 seconds to prevent overlap of two days' dialogs.
 
-[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.0.3...HEAD
+[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.1...HEAD
+[2.1]: https://github.com/grahampugh/nice-updater/compare/v2.0.3...v2.1
 [2.0.3]: https://github.com/grahampugh/nice-updater/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/grahampugh/nice-updater/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/grahampugh/nice-updater/compare/v2.0...v2.0.1

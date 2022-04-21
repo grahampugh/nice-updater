@@ -4,7 +4,7 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.0.3"
+version="2.1"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
@@ -18,14 +18,17 @@ updateInProgressTitle="Software Update In Progress"
 # The location of your log, keep in mind that if you nest the log into a folder that does not exist you'll need to mkdir -p the directory as well
 log="/Library/Logs/Nice_Updater.log"
 
+# The location of the status file, keep in mind that if the folder does not exist you'll need to mkdir -p the directory as well
+EAFile="/Library/Scripts/nice_updater_status.txt"
+
 # The number of days to check for updates after a full update has been performed
-afterFullUpdateDelayDayCount="14"
+afterFullUpdateDelayDayCount="7"
 
 # The number of days to check for updates after a updates were checked, but no updates were available
 afterEmptyUpdateDelayDayCount="3"
 
 # The number of times to alert a single user prior to forcibly installing updates
-maxNotificationCount="10"
+maxNotificationCount="8"
 
 # Calendar based start interval - hours and minutes.
 startIntervalHour="13"   # valid is 0-23. If left blank, daemon will launch every hour instead of once per day.
@@ -104,6 +107,7 @@ defaults write "$PWD/$preferenceFileName" UpdateRequiredTitle -string "$updateRe
 defaults write "$PWD/$preferenceFileName" UpdateRequiredMessage -string "$updateRequiredMessage"
 defaults write "$PWD/$preferenceFileName" UpdateInProgressTitle -string "$updateInProgressTitle"
 defaults write "$PWD/$preferenceFileName" Log -string "$log"
+defaults write "$PWD/$preferenceFileName" EAFile -string "$EAFile"
 defaults write "$PWD/$preferenceFileName" AfterFullUpdateDelayDayCount -int "$afterFullUpdateDelayDayCount"
 defaults write "$PWD/$preferenceFileName" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
 defaults write "$PWD/$preferenceFileName" MaxNotificationCount -int "$maxNotificationCount"
@@ -127,6 +131,7 @@ if find "$PWD/custom_icon" -name "*.png" ; then
     defaults write "$PWD/$preferenceFileName" IconCustomPath -string "$icon_path"
 else
     echo "Nothing found at $PWD/custom_icon/*.png"
+    defaults write "$PWD/$preferenceFileName" IconCustomPath -string ""
 fi
 
 # Copy the LaunchDaemon plists to the temp build directory

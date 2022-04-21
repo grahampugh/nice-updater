@@ -5,15 +5,17 @@
 	<key>AfterEmptyUpdateDelayDayCount</key>
 	<integer>3</integer>
 	<key>AfterFullUpdateDelayDayCount</key>
-	<integer>14</integer>
+	<integer>7</integer>
 	<key>AlertTimeout</key>
 	<integer>3540</integer>
+	<key>EAFile</key>
+	<string>/Library/Scripts/nice_updater_status.txt</string>
 	<key>IconCustomPath</key>
-	<string>/Library/Scripts/nice_updater_custom_icon.png</string>
+	<string></string>
 	<key>Log</key>
 	<string>/Library/Logs/Nice_Updater.log</string>
 	<key>MaxNotificationCount</key>
-	<integer>10</integer>
+	<integer>8</integer>
 	<key>UpdateInProgressTitle</key>
 	<string>Software Update In Progress</string>
 	<key>UpdateRequiredMessage</key>

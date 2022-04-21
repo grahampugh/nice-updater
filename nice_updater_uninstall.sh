@@ -12,6 +12,7 @@ mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"
 watchPathsPlist="/Library/Preferences/${identifier}.trigger.plist"
 preferenceFileFullPath="/Library/Preferences/${identifier}.prefs.plist"
 iconPath="/Library/Scripts/nice_updater_custom_icon.png"
+EAFilePath="/Library/Scripts/nice_updater_status.txt"
 scriptPath="/Library/Scripts/nice_updater.sh"
 uninstallScriptPath="/Library/Scripts/nice_updater_uninstall.sh"
 uninstallScriptName=$(basename "$uninstallScriptPath")
@@ -52,8 +53,10 @@ writelog "Deleting NiceUpdater Preferences..."
 
 writelog "Deleting NiceUpdater files..."
 
-# Delete the main preferences file
+# Delete the icon file
 [[ -e "$iconPath" ]] && rm -f "$iconPath"
+# Delete the status file
+[[ -e "$EAFilePath" ]] && rm -f "$iconPath"
 # Delete the main preferences file
 [[ -e "$scriptPath" ]] && rm -f "$scriptPath"
 [[ -e "$uninstallScriptPath" ]] && rm -f "$uninstallScriptPath"
