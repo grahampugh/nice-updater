@@ -42,7 +42,7 @@ if [[ -f "$customIconPath" ]]; then
     cp "$customIconPath" /Library/Scripts/nice_updater_custom_icon.png
     chown root:wheel /Library/Scripts/nice_updater_custom_icon.png
     chmod 644 /Library/Scripts/nice_updater_custom_icon.png
-    [[ $customIconPath ]] && defaults write "$preferenceFileFullPath" IconCustomPath -string "$customIconPath" 
+    [[ $customIconPath ]] && defaults write "$preferenceFileFullPath" IconCustomPath -string "/Library/Scripts/nice_updater_custom_icon.png" 
 fi
 
 # update the start time intervals
