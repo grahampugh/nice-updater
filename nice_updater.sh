@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.1.0"
+version="2.2"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -172,7 +172,7 @@ update_check() {
     osVersion=$( /usr/bin/sw_vers -productVersion )
     writelog "Determining available Software Updates for macOS $osVersion..."
     update_file="/tmp/nice_updater_updates.txt"
-    /usr/sbin/softwareupdate --list > "$update_file"
+    /usr/sbin/softwareupdate --list --include-config-data > "$update_file"
 
     # create list of updates that do not require a restart
     updatesNoRestart=()

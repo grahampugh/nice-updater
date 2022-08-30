@@ -4,6 +4,12 @@
 
 No date
 
+## [2.2]
+
+30.08.2022
+
+- Add `--include-config-data` to the `softwareupdate --list` command.
+
 ## [2.1]
 
 21.04.2022
@@ -89,7 +95,8 @@ Changed the default button of the jamfHelper dialogs to Cancel, because after ti
 
 Also shortened the timeout to 82800 from 99999 seconds to prevent overlap of two days' dialogs.
 
-[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.1...HEAD
+[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.2...HEAD
+[2.2]: https://github.com/grahampugh/nice-updater/compare/v2.1...v2.2
 [2.1]: https://github.com/grahampugh/nice-updater/compare/v2.0.3...v2.1
 [2.0.3]: https://github.com/grahampugh/nice-updater/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/grahampugh/nice-updater/compare/v2.0.1...v2.0.2
