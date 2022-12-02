@@ -202,7 +202,7 @@ update_check() {
         # install any updates that do not require a restart, as these do not require authentication.
         if [[ "${#updatesNoRestart[@]}" -gt 0 ]]; then
             writelog "Installing updates that DO NOT require a restart in the background..."
-            /usr/sbin/softwareupdate --install "${updatesNoRestart[@]}"
+            /usr/sbin/softwareupdate --no-scan --install "${updatesNoRestart[@]}"
         fi
 
         # If the script moves past this point, a restart is required.
