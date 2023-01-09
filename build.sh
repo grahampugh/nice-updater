@@ -38,6 +38,7 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
+SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.0.1/dialog-2.0.1-3814.pkg"
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
 mainDaemonFileName="${mainDaemonPlist##*/}"
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"
@@ -139,6 +140,9 @@ fi
 cp "$PWD/$mainDaemonFileName" "/private/tmp/nice_updater/files/Library/LaunchDaemons/"
 cp "$PWD/$onDemandDaemonFileName" "/private/tmp/nice_updater/files/Library/LaunchDaemons/"
 cp "$PWD/$preferenceFileName" "/private/tmp/nice_updater/files/Library/Preferences/"
+
+# Download and copy swiftDialog into the temp build directory
+curl -L "$SWIFTDIALOG_URL" -o "/private/tmp/nice_updater/scripts/dialog.pkg"
 
 # Remove any unwanted .DS_Store files from the temp build directory
 find "/private/tmp/nice_updater/" -name '*.DS_Store' -type f -delete

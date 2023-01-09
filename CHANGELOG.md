@@ -11,6 +11,7 @@ No date
 - Integrate with swiftDialog. jamfHelper is no longer used.
 - Deferred updates are no longer listed (macOS 12+).
 - Message changes.
+- Package includes swiftDialog.
 
 ## [2.2]
 
