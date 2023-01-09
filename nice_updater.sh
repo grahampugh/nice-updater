@@ -32,7 +32,7 @@ dialog_output="/var/tmp/dialog.json"
 dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.0Preview1/dialog-2.0.Preview-3563.pkg"
 
 # set default icon if not included in build
-if [[ -f "$iconCustomPath" ]]; then
+if [[ "$iconCustomPath" ]]; then
     icon="$iconCustomPath"
 else
     icon="/System/Library/PrivateFrameworks/SoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns"
