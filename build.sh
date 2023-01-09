@@ -10,7 +10,7 @@ version="2.3"
 updateRequiredTitle="macOS Software Updates Required"
 
 # The message that is displayed when software updates are in progress and a user is logged in
-updateRequiredMessage="Software updates are available to be installed on this Mac which require a restart.\n\nYour administrator requires that these updates are installed as soon as possible.\n\nPlease save your work and press **Continue**. This will open the Software Update panel. From here, press **Install Now** to begin the installation."
+updateRequiredMessage="Your administrator requires that these updates are installed as soon as possible.\n\nPlease save your work and press **Continue**. This will open the Software Update panel. From here, press **Install Now** to begin the installation."
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateInProgressTitle="Software Update In Progress"

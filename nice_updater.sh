@@ -99,9 +99,7 @@ get_default_dialog_args() {
         default_dialog_args+=(
             "--blurscreen"
             "--width"
-            "50%"
-            "--height"
-            "50%"
+            "60%"
             "--button1disabled"
             "--iconsize"
             "256"
@@ -118,9 +116,7 @@ get_default_dialog_args() {
         default_dialog_args+=(
             "--moveable"
             "--width"
-            "600"
-            "--height"
-            "300"
+            "60%"
             "--titlefont"
             "size=20"
             "--messagefont"
@@ -179,21 +175,26 @@ alert_user() {
     [[ "$notificationsLeft" == "1" ]] && local subtitle="1 remaining deferral"
     [[ "$notificationsLeft" == "0" ]] && local subtitle="No deferrals remaining! Click on \"Install Now\" to proceed"
 
+    message="**$subtitle**\n\nSoftware updates are available to be installed on this Mac which require a restart:\n\n"
+    for ((i=0; i<"${#updatesRestart[@]}"; i++)); do
+        message="$message""- ${updatesRestart[$i]}  \n"
+    done
+    message="$message\n"
+    message="$message""$helperDesc"
+
     writelog "Notifying $loggedInUser of available updates..."
     if [[ "$notificationsLeft" == "0" ]]; then
         # quit any existing window
         echo "quit:" >> "$dialog_log"
-        writelog "Opening full screen dialog"
+        writelog "Opening utility dialog window without deferral button"
         # set the dialog command arguments
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
             "--title"
             "$helperTitle"
-            "--heading"
-            "$subtitle"
             "--message"
-            "$helperDesc"
+            "$message"
             "--icon"
             "$icon"
             "--button1text"
@@ -205,7 +206,7 @@ alert_user() {
     else
         # quit any existing window
         echo "quit:" >> "$dialog_log"
-        writelog "Opening full screen dialog"
+        writelog "Opening utility dialog window with deferral button"
         # set the dialog command arguments
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
@@ -213,7 +214,7 @@ alert_user() {
             "--title"
             "$helperTitle"
             "--message"
-            "**$subtitle**\n\n$helperDesc"
+            "$message"
             "--icon"
             "$icon"
             "--button1text"

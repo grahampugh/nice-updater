@@ -36,14 +36,6 @@ echo "Stopping daemon..."
 /bin/launchctl unload -w "$mainDaemonPlist"
 /bin/launchctl unload -w "$mainOnDemandDaemonPlist"
 
-# update the icon path
-if [[ -f "$customIconPath" ]]; then
-    echo "Custom icon specified. Copying to /Library/Scripts/nice_updater_custom_icon.png..."
-    cp "$customIconPath" /Library/Scripts/nice_updater_custom_icon.png
-    chown root:wheel /Library/Scripts/nice_updater_custom_icon.png
-    chmod 644 /Library/Scripts/nice_updater_custom_icon.png
-fi
-
 # update the start time intervals
 if [[ $startIntervalHour || $startIntervalMinute ]]; then
     echo "Reconfiguring StartCalendarInterval..."
@@ -63,6 +55,7 @@ if [[ $alertTimeoutSeconds ]]; then
     [[ $maxNotificationCount ]] && defaults write "$preferenceFileFullPath" MaxNotificationCount -int "$maxNotificationCount"
     [[ $afterEmptyUpdateDelayDayCount ]] && defaults write "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
     [[ $afterFullUpdateDelayDayCount ]] && defaults write "$preferenceFileFullPath" AfterFullUpdateDelayDayCount -int "$afterFullUpdateDelayDayCount"
+    [[ $customIconPath ]] && defaults write "$preferenceFileFullPath" IconCustomPath -string "$customIconPath"
 fi
 
 # Start our LaunchDaemon
