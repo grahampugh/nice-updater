@@ -4,6 +4,14 @@
 
 No date
 
+## [2.3]
+
+09.01.2023
+
+- Integrate with swiftDialog. jamfHelper is no longer used.
+- Deferred updates are no longer listed (macOS 12+).
+- Message changes.
+
 ## [2.2]
 
 30.08.2022
@@ -95,7 +103,8 @@ Changed the default button of the jamfHelper dialogs to Cancel, because after ti
 
 Also shortened the timeout to 82800 from 99999 seconds to prevent overlap of two days' dialogs.
 
-[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.2...HEAD
+[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.3...HEAD
+[2.3]: https://github.com/grahampugh/nice-updater/compare/v2.2...v2.3
 [2.2]: https://github.com/grahampugh/nice-updater/compare/v2.1...v2.2
 [2.1]: https://github.com/grahampugh/nice-updater/compare/v2.0.3...v2.1
 [2.0.3]: https://github.com/grahampugh/nice-updater/compare/v2.0.2...v2.0.3

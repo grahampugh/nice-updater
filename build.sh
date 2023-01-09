@@ -4,13 +4,13 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.2"
+version="2.3"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
 
 # The message that is displayed when software updates are in progress and a user is logged in
-updateRequiredMessage="Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now from the Software Update panel to begin the installation."
+updateRequiredMessage="Software updates are available to be installed on this Mac which require a restart.\n\nYour administrator requires that these updates are installed as soon as possible.\n\nPlease save your work and press **Continue**. This will open the Software Update panel. From here, press **Install Now** to begin the installation."
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateInProgressTitle="Software Update In Progress"
@@ -112,6 +112,7 @@ defaults write "$PWD/$preferenceFileName" AfterFullUpdateDelayDayCount -int "$af
 defaults write "$PWD/$preferenceFileName" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
 defaults write "$PWD/$preferenceFileName" MaxNotificationCount -int "$maxNotificationCount"
 defaults write "$PWD/$preferenceFileName" AlertTimeout -int "$alertTimeout"
+defaults write "$PWD/$preferenceFileName" IconCustomPath -string "$iconCustomPath"
 
 # Migrate preinstall and postinstall scripts to temp build directory
 cp "$PWD/preinstall.sh" /private/tmp/nice_updater/scripts/preinstall

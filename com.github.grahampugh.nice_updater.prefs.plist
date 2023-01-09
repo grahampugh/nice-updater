@@ -19,7 +19,7 @@
 	<key>UpdateInProgressTitle</key>
 	<string>Software Update In Progress</string>
 	<key>UpdateRequiredMessage</key>
-	<string>Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now from the Software Update panel to begin the installation.</string>
+	<string>Software updates are available to be installed on this Mac which require a restart.\n\nYour administrator requires that these updates are installed as soon as possible.\n\nPlease save your work and press **Continue**. This will open the Software Update panel. From here, press **Install Now** to begin the installation.</string>
 	<key>UpdateRequiredTitle</key>
 	<string>macOS Software Updates Required</string>
 </dict>
