@@ -1,6 +1,6 @@
 # Nice Updater 2
 
-A tool to faciliate the updating of macOS that (nicely) gives the user several reminders to update before becomgin really annoying.
+A tool to faciliate the updating of macOS that (nicely) gives the user several reminders to update before becoming more annoying.
 
 This fork uses swiftDialog instead of Yo.app. Additional configuration opportunities have also been added.
 
