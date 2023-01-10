@@ -4,13 +4,13 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.2"
+version="2.3"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
 
 # The message that is displayed when software updates are in progress and a user is logged in
-updateRequiredMessage="Software updates are required to be installed on this Mac which require a restart. Please save your work and press Install Now from the Software Update panel to begin the installation."
+updateRequiredMessage="Your administrator requires that these updates are installed as soon as possible.\n\nPlease save your work and press **Continue**. This will open the Software Update panel. From here, press **Install Now** to begin the installation."
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateInProgressTitle="Software Update In Progress"
@@ -38,6 +38,7 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
+SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.0.1/dialog-2.0.1-3814.pkg"
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
 mainDaemonFileName="${mainDaemonPlist##*/}"
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"
@@ -112,6 +113,7 @@ defaults write "$PWD/$preferenceFileName" AfterFullUpdateDelayDayCount -int "$af
 defaults write "$PWD/$preferenceFileName" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
 defaults write "$PWD/$preferenceFileName" MaxNotificationCount -int "$maxNotificationCount"
 defaults write "$PWD/$preferenceFileName" AlertTimeout -int "$alertTimeout"
+defaults write "$PWD/$preferenceFileName" IconCustomPath -string "$iconCustomPath"
 
 # Migrate preinstall and postinstall scripts to temp build directory
 cp "$PWD/preinstall.sh" /private/tmp/nice_updater/scripts/preinstall
@@ -138,6 +140,9 @@ fi
 cp "$PWD/$mainDaemonFileName" "/private/tmp/nice_updater/files/Library/LaunchDaemons/"
 cp "$PWD/$onDemandDaemonFileName" "/private/tmp/nice_updater/files/Library/LaunchDaemons/"
 cp "$PWD/$preferenceFileName" "/private/tmp/nice_updater/files/Library/Preferences/"
+
+# Download and copy swiftDialog into the temp build directory
+curl -L "$SWIFTDIALOG_URL" -o "/private/tmp/nice_updater/scripts/dialog.pkg"
 
 # Remove any unwanted .DS_Store files from the temp build directory
 find "/private/tmp/nice_updater/" -name '*.DS_Store' -type f -delete

@@ -9,9 +9,9 @@
 # 5  - Start interval (minute of the hour), e.g. 45 = 45 mins past the hour, e.g. 13:45
 # 6  - Alert timeout in seconds. The time that the alert should stay on the screen
 #          (should be less than the start interval)
-# 7  - Max number of deferrals (default is 11 so first message says "10 remaining alerts")
+# 7  - Max number of deferrals (default is 8 so first message says "7 remaining alerts")
 # 8  - Number of days to wait after an empty software update run (default is 3)
-# 9  - Number of days to wait after a full software update is carried out (default is 14)
+# 9  - Number of days to wait after a full software update is carried out (default is 7)
 # 10 - Custom icon path - must exist on the device before the policy is run
 
 [[ $4 ]] && startIntervalHour=$4
@@ -36,14 +36,6 @@ echo "Stopping daemon..."
 /bin/launchctl unload -w "$mainDaemonPlist"
 /bin/launchctl unload -w "$mainOnDemandDaemonPlist"
 
-# update the icon path
-if [[ -f "$customIconPath" ]]; then
-    echo "Custom icon specified. Copying to /Library/Scripts/nice_updater_custom_icon.png..."
-    cp "$customIconPath" /Library/Scripts/nice_updater_custom_icon.png
-    chown root:wheel /Library/Scripts/nice_updater_custom_icon.png
-    chmod 644 /Library/Scripts/nice_updater_custom_icon.png
-fi
-
 # update the start time intervals
 if [[ $startIntervalHour || $startIntervalMinute ]]; then
     echo "Reconfiguring StartCalendarInterval..."
@@ -63,6 +55,7 @@ if [[ $alertTimeoutSeconds ]]; then
     [[ $maxNotificationCount ]] && defaults write "$preferenceFileFullPath" MaxNotificationCount -int "$maxNotificationCount"
     [[ $afterEmptyUpdateDelayDayCount ]] && defaults write "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount -int "$afterEmptyUpdateDelayDayCount"
     [[ $afterFullUpdateDelayDayCount ]] && defaults write "$preferenceFileFullPath" AfterFullUpdateDelayDayCount -int "$afterFullUpdateDelayDayCount"
+    [[ $customIconPath ]] && defaults write "$preferenceFileFullPath" IconCustomPath -string "$customIconPath"
 fi
 
 # Start our LaunchDaemon

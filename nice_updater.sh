@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.2"
+version="2.3"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -16,35 +16,117 @@ afterFullUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterFull
 afterEmptyUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount)
 maxNotificationCount=$(defaults read "$preferenceFileFullPath" MaxNotificationCount)
 iconCustomPath=$(defaults read "$preferenceFileFullPath" IconCustomPath)
+workdir="/Library/Scripts/"
 
 scriptName=$(basename "$0")
-JAMFHELPER="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
-current_user=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
+# current_user=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
+
+# swiftDialog tool
+dialog_app="/Library/Application Support/Dialog/Dialog.app"
+dialog_bin="/usr/local/bin/dialog"
+dialog_log="/var/tmp/dialog.log"
+dialog_output="/var/tmp/dialog.json"
+
+# URL for downloading dialog (with tag version)
+# This ensures a compatible dialog is used if not using the package installer
+dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.0Preview1/dialog-2.0.Preview-3563.pkg"
 
 # set default icon if not included in build
-system_build=$( /usr/bin/sw_vers -buildVersion )
-major_version=${system_build:0:2}
-if [[ -f "$iconCustomPath" ]]; then
+if [[ "$iconCustomPath" ]]; then
     icon="$iconCustomPath"
-elif [[ "$major_version" -le 16 ]]; then
-    icon="/System/Library/CoreServices/Software Update.app/Contents/Resources/SoftwareUpdate.icns"
-elif [[ "$major_version" -ge 17 ]]; then
-    icon="/System/Library/CoreServices/Install Command Line Developer Tools.app/Contents/Resources/SoftwareUpdate.icns"
+else
+    icon="/System/Library/PrivateFrameworks/SoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns"
 fi
 
 writelog() {
     DATE=$(date +%Y-%m-%d\ %H:%M:%S)
-    /bin/echo "${1}"
-    /bin/echo "$DATE" " $1" >> "$log"
+    echo "${1}"
+    echo "$DATE" " $1" >> "$log"
 }
 
 write_status() {
-    /bin/echo "$1" > "$EAFile"
+    echo "$1" > "$EAFile"
 }
 
 finish() {
     writelog "======== Finished $scriptName ========"
     exit "$1"
+}
+
+# -----------------------------------------------------------------------------
+# Download dialog if not present
+# -----------------------------------------------------------------------------
+check_for_dialog_app() {
+    if [[ -d "$dialog_app" && -f "$dialog_bin" ]]; then
+        writelog "   [check_for_dialog_app] dialog is installed ($dialog_app)"
+    else
+        writelog "   [check_for_dialog_app] Downloading DEPNotify.app..."
+        if /usr/bin/curl -L "$dialog_download_url" -o "$workdir/dialog.pkg" ; then
+            if ! installer -pkg "$workdir/dialog.pkg" -target / ; then
+                writelog "   [check_for_dialog_app] dialog installation failed"
+            fi
+        else
+            writelog "   [check_for_dialog_app] dialog download failed"
+        fi
+        # check it did actually get downloaded
+        if [[ -d "$dialog_app" && -f "$dialog_bin" ]]; then
+            writelog "   [check_for_dialog_app] dialog is installed"
+            # quit an existing window
+            echo "quit:" >> "$dialog_log"
+        else
+            writelog "   [check_for_dialog_app] Could not download dialog."
+        fi
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Default dialog arguments
+# -----------------------------------------------------------------------------
+get_default_dialog_args() {
+    # set the dialog command arguments
+    # $1 - window type
+    default_dialog_args=(
+        "--ontop"
+        "--json"
+        "--ignorednd"
+        "--position"
+        "centre"
+        "--quitkey"
+        "C"
+    )
+    if [[ "$1" == "fullscreen" ]]; then
+        echo "   [get_default_dialog_args] Invoking fullscreen dialog"
+        default_dialog_args+=(
+            "--blurscreen"
+            "--width"
+            "60%"
+            "--button1disabled"
+            "--iconsize"
+            "256"
+            "--centreicon"
+            "--titlefont"
+            "size=32"
+            "--messagefont"
+            "size=24"
+            "--alignment"
+            "centre"
+        )
+    elif [[ "$1" == "utility" ]]; then
+        echo "   [get_default_dialog_args] Invoking utility dialog"
+        default_dialog_args+=(
+            "--moveable"
+            "--width"
+            "60%"
+            "--titlefont"
+            "size=20"
+            "--messagefont"
+            "size=14"
+            "--alignment"
+            "left"
+            "--iconsize"
+            "128"
+        )
+    fi
 }
 
 random_delay() {
@@ -71,7 +153,7 @@ open_software_update() {
     suPID=$!
     writelog "Software Update PID: $suPID"
     # While Software Update is open...
-    while kill -0 $suPID 2> /dev/null; do
+    while kill -0 "$suPID" 2> /dev/null; do
         sleep 1
     done
     writelog "Software Update was closed"
@@ -93,39 +175,79 @@ alert_user() {
     [[ "$notificationsLeft" == "1" ]] && local subtitle="1 remaining deferral"
     [[ "$notificationsLeft" == "0" ]] && local subtitle="No deferrals remaining! Click on \"Install Now\" to proceed"
 
-    if /usr/bin/pgrep jamfHelper ; then
-    writelog "Existing JamfHelper window running... killing"
-        /usr/bin/pkill jamfHelper
-        sleep 3
-    fi
+    message="**$subtitle**\n\nSoftware updates are available to be installed on this Mac which require a restart:\n\n"
+    for ((i=0; i<"${#updatesRestart[@]}"; i++)); do
+        message="$message""- ${updatesRestart[$i]}  \n"
+    done
+    message="$message\n"
+    message="$message""$helperDesc"
 
     writelog "Notifying $loggedInUser of available updates..."
     if [[ "$notificationsLeft" == "0" ]]; then
-        helperExitCode=$( sudo -u "$current_user" "$JAMFHELPER" -windowType utility -lockHUD -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -defaultButton 1 -icon "$icon" -iconSize 100 )
+        # quit any existing window
+        echo "quit:" >> "$dialog_log"
+        writelog "Opening utility dialog window without deferral button"
+        # set the dialog command arguments
+        get_default_dialog_args "utility"
+        dialog_args=("${default_dialog_args[@]}")
+        dialog_args+=(
+            "--title"
+            "$helperTitle"
+            "--message"
+            "$message"
+            "--icon"
+            "$icon"
+            "--button1text"
+            "Install Now"
+        )
+        # run the dialog command
+        "$dialog_bin" "${dialog_args[@]}" & sleep 0.1
+
     else
-        sudo -u "$current_user" "$JAMFHELPER" -windowType utility -title "$helperTitle" -heading "$subtitle" -description "$helperDesc" -button1 "Install Now" -button2 "Cancel" -defaultButton 2 -cancelButton 2 -icon "$icon" -iconSize 100 &
-        jamfHelperPID=$!
-        writelog "jamfHelper PID: $jamfHelperPID"
+        # quit any existing window
+        echo "quit:" >> "$dialog_log"
+        writelog "Opening utility dialog window with deferral button"
+        # set the dialog command arguments
+        get_default_dialog_args "utility"
+        dialog_args=("${default_dialog_args[@]}")
+        dialog_args+=(
+            "--title"
+            "$helperTitle"
+            "--message"
+            "$message"
+            "--icon"
+            "$icon"
+            "--button1text"
+            "Continue"
+            "--button2text"
+            "Defer for 24 hours"
+        )
+        # run the dialog command
+        "$dialog_bin" "${dialog_args[@]}" & sleep 0.1
+        
+        dialogPID=$!
+        writelog "dialogPID: $dialogPID"
         # since the "cancel" exit code is the same as the timeout exit code, we
         # need to distinguish between the two. We use a while loop that checks
         # that the process exists every second. If so, count down 1 and check
         # again. If the process is gone, use `wait` to grab the exit code.
         timeLeft=$alertTimeout
         while [[ $timeLeft -gt 0 ]]; do
-            if pgrep jamfHelper ; then
+            if /usr/bin/pgrep dialog ; then
                 # writelog "Waiting for timeout: $timeLeft remaining"
                 sleep 1
                 ((timeLeft--))
             else
-                wait $jamfHelperPID
+                wait $dialogPID
                 helperExitCode=$?
                 break
             fi
         done
         # if the process is still running, we need to kill it and give a fake
         # exit code
-        if pgrep jamfHelper; then
-            pkill jamfHelper
+        if /usr/bin/pgrep dialog; then
+            # quit an existing window
+            echo "quit:" >> "$dialog_log"
             helperExitCode=1
         else
             writelog "A button was pressed"
@@ -150,7 +272,6 @@ alert_user() {
     /usr/libexec/PlistBuddy -c "Delete :users:$loggedInUser" $preferenceFileFullPath 2> /dev/null
     /usr/libexec/PlistBuddy -c "Add :users:$loggedInUser dict" $preferenceFileFullPath
     /usr/libexec/PlistBuddy -c "Add :users:$loggedInUser:alert_count integer $notificationCount" $preferenceFileFullPath
-
 }
 
 alert_logic() {
@@ -158,13 +279,13 @@ alert_logic() {
     notificationCount=$(/usr/libexec/PlistBuddy -c "Print :users:$loggedInUser:alert_count" $preferenceFileFullPath 2> /dev/null | xargs)
     if [[ "$notificationCount" -ge "$maxNotificationCount" ]]; then
         notificationsLeft="$((maxNotificationCount - notificationCount))"
-        writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer."
-        alert_user "$notificationsLeft remaining deferrals." "$notificationCount"
+        writelog "$loggedInUser has been notified $notificationCount times; not waiting any longer"
+        alert_user "No remaining deferrals" "$notificationCount"
     else
         ((notificationCount++))
         notificationsLeft="$((maxNotificationCount - notificationCount))"
-        writelog "$notificationsLeft remaining deferrals."
-        alert_user "$notificationsLeft remaining deferrals." "$notificationCount"
+        writelog "$notificationsLeft remaining deferrals"
+        alert_user "$notificationsLeft remaining deferrals" "$notificationCount"
     fi
 }
 
@@ -181,7 +302,7 @@ update_check() {
             updatesNoRestart+=("$line")
             writelog "Added '$line' to list of updates that do not require a restart"
         fi
-    done <<< "$(grep -v restart "$update_file" | grep -B1 'Recommended: YES' | grep -v -i Recommended | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
+    done <<< "$(grep -v restart "$update_file" | grep -v 'Deferred: YES' | grep -B1 'Recommended: YES' | grep -v -i Recommended | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
 
     # create list of updates that do require a restart
     updatesRestart=()
@@ -190,7 +311,7 @@ update_check() {
             updatesRestart+=("$line")
             writelog "Added '$line' to list of updates that require a restart"
         fi
-    done <<< "$(grep -B1 'Recommended: YES, Action: restart' "$update_file" | grep -v restart | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
+    done <<< "$(grep -v 'Deferred: YES' "$update_file" | grep -B1 'Recommended: YES, Action: restart' | grep -v restart | grep -v '\-\-' | sed 's|.*\* ||g' | sed 's|^Label: ||')"
 
     updateCount=$(grep -c "Recommended: YES" "$update_file")
 

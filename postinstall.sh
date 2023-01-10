@@ -5,6 +5,16 @@ mainDaemonPlist="/Library/LaunchDaemons/com.github.grahampugh.nice_updater.plist
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/com.github.grahampugh.nice_updater_on_demand.plist"
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
 
+DIR=$(dirname "$0")
+
+# install swiftDialog
+if /usr/sbin/installer -tgt / -pkg "$DIR/dialog.pkg"; then
+    echo "swiftDialog successfully installed"
+else
+    echo "ERROR: swiftDialog was not installed"
+    exit 1
+fi
+
 # Set permissions on LaunchDaemon and Script
 chown root:wheel "$mainDaemonPlist"
 chmod 644 "$mainDaemonPlist"
