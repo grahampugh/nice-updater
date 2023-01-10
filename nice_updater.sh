@@ -153,7 +153,7 @@ open_software_update() {
     suPID=$!
     writelog "Software Update PID: $suPID"
     # While Software Update is open...
-    while kill -0 $suPID 2> /dev/null; do
+    while kill -0 "$suPID" 2> /dev/null; do
         sleep 1
     done
     writelog "Software Update was closed"

@@ -9,9 +9,9 @@
 # 5  - Start interval (minute of the hour), e.g. 45 = 45 mins past the hour, e.g. 13:45
 # 6  - Alert timeout in seconds. The time that the alert should stay on the screen
 #          (should be less than the start interval)
-# 7  - Max number of deferrals (default is 11 so first message says "10 remaining alerts")
+# 7  - Max number of deferrals (default is 8 so first message says "7 remaining alerts")
 # 8  - Number of days to wait after an empty software update run (default is 3)
-# 9  - Number of days to wait after a full software update is carried out (default is 14)
+# 9  - Number of days to wait after a full software update is carried out (default is 7)
 # 10 - Custom icon path - must exist on the device before the policy is run
 
 [[ $4 ]] && startIntervalHour=$4
