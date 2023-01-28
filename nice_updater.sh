@@ -60,7 +60,7 @@ check_for_dialog_app() {
     if [[ -d "$dialog_app" && -f "$dialog_bin" ]]; then
         writelog "   [check_for_dialog_app] dialog is installed ($dialog_app)"
     else
-        writelog "   [check_for_dialog_app] Downloading DEPNotify.app..."
+        writelog "   [check_for_dialog_app] Downloading swiftDialog.app..."
         if /usr/bin/curl -L "$dialog_download_url" -o "$workdir/dialog.pkg" ; then
             if ! installer -pkg "$workdir/dialog.pkg" -target / ; then
                 writelog "   [check_for_dialog_app] dialog installation failed"
