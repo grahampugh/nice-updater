@@ -4,7 +4,7 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.3"
+version="2.3.1"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
