@@ -38,7 +38,7 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
-SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.0.1/dialog-2.0.1-3814.pkg"
+SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.1.0/dialog-2.1.0-4148.pkg"
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
 mainDaemonFileName="${mainDaemonPlist##*/}"
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"

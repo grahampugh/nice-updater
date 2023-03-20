@@ -19,17 +19,16 @@ iconCustomPath=$(defaults read "$preferenceFileFullPath" IconCustomPath)
 workdir="/Library/Scripts/"
 
 scriptName=$(basename "$0")
-# current_user=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
+current_user=$(/usr/sbin/scutil <<< "show State:/Users/ConsoleUser" | /usr/bin/awk -F': ' '/[[:space:]]+Name[[:space:]]:/ { if ( $2 != "loginwindow" ) { print $2 }}')
 
 # swiftDialog tool
 dialog_app="/Library/Application Support/Dialog/Dialog.app"
 dialog_bin="/usr/local/bin/dialog"
-dialog_log="/var/tmp/dialog.log"
-dialog_output="/var/tmp/dialog.json"
+dialog_log=$(/usr/bin/mktemp /var/tmp/dialog.XXX)
 
 # URL for downloading dialog (with tag version)
 # This ensures a compatible dialog is used if not using the package installer
-dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.0Preview1/dialog-2.0.Preview-3563.pkg"
+dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.1.0/dialog-2.1.0-4148.pkg"
 
 # set default icon if not included in build
 if [[ "$iconCustomPath" ]]; then
@@ -77,6 +76,11 @@ check_for_dialog_app() {
             writelog "   [check_for_dialog_app] Could not download dialog."
         fi
     fi
+    # ensure log file is writable
+    writelog "[check_for_dialog_app] Creating dialog log ($dialog_log)..."
+    /usr/bin/touch "$dialog_log"
+    /usr/sbin/chown "$current_user:wheel" "$dialog_log"
+    /bin/chmod 666 "$dialog_log"
 }
 
 # -----------------------------------------------------------------------------
