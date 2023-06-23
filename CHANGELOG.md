@@ -4,6 +4,15 @@
 
 No date
 
+## [2.4]
+
+23.06.2023
+
+- If a user figures out the quit key and exits swiftDialog that way, this is treated the same as the Continue button.
+- Dialog is no longer movable, so users cannot move it out of the way.
+- If Software Update is left open for an hour, the dialog appears again, so users can't just minimise Software Update to avoid deferral count increases.
+- Update for compatibility with swiftDialog 2.2.1.
+
 ## [2.3.1]
 
 20.03.2023
@@ -110,7 +119,8 @@ Changed the default button of the jamfHelper dialogs to Cancel, because after ti
 
 Also shortened the timeout to 82800 from 99999 seconds to prevent overlap of two days' dialogs.
 
-[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.3...HEAD
+[untagged]: https://github.com/grahampugh/nice-updater/compare/v2.4...HEAD
+[2.4]: https://github.com/grahampugh/nice-updater/compare/v2.3.1...v2.4
 [2.3.1]: https://github.com/grahampugh/nice-updater/compare/v2.3...v2.3.1
 [2.3]: https://github.com/grahampugh/nice-updater/compare/v2.2...v2.3
 [2.2]: https://github.com/grahampugh/nice-updater/compare/v2.1...v2.2

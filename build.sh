@@ -4,7 +4,7 @@
 identifier="com.github.grahampugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.3.1"
+version="2.4"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
@@ -38,7 +38,7 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
-SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.1.0/dialog-2.1.0-4148.pkg"
+SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.2.1/dialog-2.2.1-4591.pkg"
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
 mainDaemonFileName="${mainDaemonPlist##*/}"
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"

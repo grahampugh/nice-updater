@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.3"
+version="2.4"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -28,7 +28,7 @@ dialog_log=$(/usr/bin/mktemp /var/tmp/dialog.XXX)
 
 # URL for downloading dialog (with tag version)
 # This ensures a compatible dialog is used if not using the package installer
-dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.1.0/dialog-2.1.0-4148.pkg"
+dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.2.1/dialog-2.2.1-4591.pkg"
 
 # set default icon if not included in build
 if [[ "$iconCustomPath" ]]; then
@@ -118,7 +118,6 @@ get_default_dialog_args() {
     elif [[ "$1" == "utility" ]]; then
         echo "   [get_default_dialog_args] Invoking utility dialog"
         default_dialog_args+=(
-            "--moveable"
             "--width"
             "60%"
             "--titlefont"
@@ -155,13 +154,24 @@ record_last_full_update() {
 open_software_update() {
     /usr/bin/open -W /System/Library/PreferencePanes/SoftwareUpdate.prefPane &
     suPID=$!
-    writelog "Software Update PID: $suPID"
+    writelog "Opening Software Update with PID: $suPID"
     # While Software Update is open...
+    timecount=0
     while kill -0 "$suPID" 2> /dev/null; do
         sleep 1
+        # set a maximum time that Software Update can be open before invoking another dialog
+        ((timecount++))
+        if [[ $timecount -ge 3600 ]]; then
+            break
+        fi
     done
-    writelog "Software Update was closed"
-    write_status "Software Update was closed"
+    if [[ $timecount -ge 3600 ]]; then
+        writelog "Software Update was open too long"
+        write_status "Software Update was open too long"
+    else
+        writelog "Software Update was closed"
+        write_status "Software Update was closed"
+    fi
     was_closed=1
 }
 
@@ -225,47 +235,32 @@ alert_user() {
             "Continue"
             "--button2text"
             "Defer for 24 hours"
+            "--timer"
+            "$alertTimeout"
+            "--hidetimerbar"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" & sleep 0.1
-        
-        dialogPID=$!
-        writelog "dialogPID: $dialogPID"
-        # since the "cancel" exit code is the same as the timeout exit code, we
-        # need to distinguish between the two. We use a while loop that checks
-        # that the process exists every second. If so, count down 1 and check
-        # again. If the process is gone, use `wait` to grab the exit code.
-        timeLeft=$alertTimeout
-        while [[ $timeLeft -gt 0 ]]; do
-            if /usr/bin/pgrep dialog ; then
-                # writelog "Waiting for timeout: $timeLeft remaining"
-                sleep 1
-                ((timeLeft--))
-            else
-                wait $dialogPID
-                helperExitCode=$?
-                break
-            fi
-        done
-        # if the process is still running, we need to kill it and give a fake
-        # exit code
-        if /usr/bin/pgrep dialog; then
-            # quit an existing window
-            echo "quit:" >> "$dialog_log"
-            helperExitCode=1
-        else
-            writelog "A button was pressed"
-        fi
     fi
 
-    # writelog "Response: $helperExitCode"
-    if [[ $helperExitCode == 0 ]]; then
+    # get the helper exit code
+    dialogPID=$!
+    wait $dialogPID
+    helperExitCode=$?
+    writelog "Dialog exit code: $helperExitCode"
+
+    # all exit codes decrease the remaining deferrals except when the window times out without response
+    if [[ $helperExitCode -eq 0 ]]; then
         writelog "User initiated installation"
         write_status "User initiated installation"
         open_software_update
-    elif [[ $helperExitCode == 2 ]]; then
+    elif [[ $helperExitCode -eq 2 ]]; then
         writelog "User cancelled installation"
         write_status "User cancelled installation"
+    elif [[ $helperExitCode -eq 10 ]]; then
+        writelog "User quit dialog using the quit key"
+        write_status "User quit dialog using the quit key"
+        open_software_update
     else
         writelog "Alert timed out without response"
         write_status "Alert timed out without response"
