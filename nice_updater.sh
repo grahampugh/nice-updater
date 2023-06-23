@@ -7,15 +7,15 @@ version="2.4"
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
 
 ###### Variables below this point are not intended to be modified #####
-helperTitle=$(defaults read "$preferenceFileFullPath" UpdateRequiredTitle)
-helperDesc=$(defaults read "$preferenceFileFullPath" UpdateRequiredMessage)
-alertTimeout=$(defaults read "$preferenceFileFullPath" AlertTimeout)
-log=$(defaults read "$preferenceFileFullPath" Log)
-EAFile=$(defaults read "$preferenceFileFullPath" EAFile)
-afterFullUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterFullUpdateDelayDayCount)
-afterEmptyUpdateDelayDayCount=$(defaults read "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount)
-maxNotificationCount=$(defaults read "$preferenceFileFullPath" MaxNotificationCount)
-iconCustomPath=$(defaults read "$preferenceFileFullPath" IconCustomPath)
+helperTitle=$(/usr/bin/defaults read "$preferenceFileFullPath" UpdateRequiredTitle)
+helperDesc=$(/usr/bin/defaults read "$preferenceFileFullPath" UpdateRequiredMessage)
+alertTimeout=$(/usr/bin/defaults read "$preferenceFileFullPath" AlertTimeout)
+log=$(/usr/bin/defaults read "$preferenceFileFullPath" Log)
+EAFile=$(/usr/bin/defaults read "$preferenceFileFullPath" EAFile)
+afterFullUpdateDelayDayCount=$(/usr/bin/defaults read "$preferenceFileFullPath" AfterFullUpdateDelayDayCount)
+afterEmptyUpdateDelayDayCount=$(/usr/bin/defaults read "$preferenceFileFullPath" AfterEmptyUpdateDelayDayCount)
+maxNotificationCount=$(/usr/bin/defaults read "$preferenceFileFullPath" MaxNotificationCount)
+iconCustomPath=$(/usr/bin/defaults read "$preferenceFileFullPath" IconCustomPath)
 workdir="/Library/Scripts/"
 
 scriptName=$(basename "$0")
@@ -31,7 +31,12 @@ dialog_log=$(/usr/bin/mktemp /var/tmp/dialog.XXX)
 dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.2.1/dialog-2.2.1-4591.pkg"
 
 # set default icon if not included in build
-if [[ "$iconCustomPath" ]]; then
+if [[ "$iconCustomPath" == "/Applications/Self Service.app" ]]; then
+    # Create temporary icon from Self Service's custom icon (thanks, @meschwartz via @dan-snelson!)
+    temp_icon_path="/var/tmp/overlayicon.icns"
+    /usr/bin/xxd -p -s 260 "$(/usr/bin/defaults read /Library/Preferences/com.jamfsoftware.jamf self_service_app_path)"/Icon$'\r'/..namedfork/rsrc | /usr/bin/xxd -r -p > "$temp_icon_path"
+    icon="$temp_icon_path"
+elif [[ "$iconCustomPath" ]]; then
     icon="$iconCustomPath"
 else
     icon="/System/Library/PrivateFrameworks/SoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns"
@@ -61,7 +66,7 @@ check_for_dialog_app() {
     else
         writelog "   [check_for_dialog_app] Downloading swiftDialog.app..."
         if /usr/bin/curl -L "$dialog_download_url" -o "$workdir/dialog.pkg" ; then
-            if ! installer -pkg "$workdir/dialog.pkg" -target / ; then
+            if ! /usr/sbin/installer -pkg "$workdir/dialog.pkg" -target / ; then
                 writelog "   [check_for_dialog_app] dialog installation failed"
             fi
         else
@@ -372,7 +377,7 @@ main() {
     fi
 
     # Check the last time we had a full successful update
-    updatesAvailable=$(/usr/bin/defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist LastRecommendedUpdatesAvailable | /usr/bin/awk '{ if  (NF > 2) {print $1 " "  $2} else { print $0 }}')
+    updatesAvailable=$(/usr/bin//usr/bin/defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist LastRecommendedUpdatesAvailable | /usr/bin/awk '{ if  (NF > 2) {print $1 " "  $2} else { print $0 }}')
     if [[ "$updatesAvailable" -gt "0" ]]; then
         writelog "At least one recommended update was marked available from a previous check."
         random_delay

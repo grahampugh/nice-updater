@@ -26,7 +26,7 @@ chown root:wheel /Library/Scripts/nice_updater_uninstall.sh
 chmod 755 /Library/Scripts/nice_updater_uninstall.sh
 if [[ -f /Library/Scripts/nice_updater_custom_icon.png ]]; then
     chown root:wheel /Library/Scripts/nice_updater_custom_icon.png
-    chmod 644 /Library/Scripts/nice_updater_custom_icon.pngg
+    chmod 644 /Library/Scripts/nice_updater_custom_icon.png
 fi
 
 # Start our LaunchDaemons
