@@ -1,6 +1,6 @@
 # Nice Updater 2
 
-![](https://img.shields.io/github/v/release/grahampugh/nice-updater)&nbsp;![](https://img.shields.io/github/downloads/grahampugh/nice-updater/latest/total)&nbsp;![](https://img.shields.io/badge/macOS-11%2B-success)
+![](https://img.shields.io/github/v/release/grahampugh/nice-updater)&nbsp;![](https://img.shields.io/github/downloads/grahampugh/nice-updater/latest/total)&nbsp;&nbsp;![](https://img.shields.io/github/downloads/grahampugh/nice-updater/total)&nbsp;![](https://img.shields.io/badge/macOS-11%2B-success)
 
 A tool to faciliate the updating of macOS that (nicely) gives the user several reminders to update before becoming more annoying.
 
