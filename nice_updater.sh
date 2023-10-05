@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.4"
+version="2.4.1"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
 preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
@@ -28,7 +28,7 @@ dialog_log=$(/usr/bin/mktemp /var/tmp/dialog.XXX)
 
 # URL for downloading dialog (with tag version)
 # This ensures a compatible dialog is used if not using the package installer
-dialog_download_url="https://github.com/bartreardon/swiftDialog/releases/download/v2.2.1/dialog-2.2.1-4591.pkg"
+SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.3.2/dialog-2.3.2-4726.pkg"
 
 # set default icon if not included in build
 if [[ "$iconCustomPath" == "/Applications/Self Service.app" ]]; then
@@ -65,7 +65,7 @@ check_for_dialog_app() {
         writelog "   [check_for_dialog_app] dialog is installed ($dialog_app)"
     else
         writelog "   [check_for_dialog_app] Downloading swiftDialog.app..."
-        if /usr/bin/curl -L "$dialog_download_url" -o "$workdir/dialog.pkg" ; then
+        if /usr/bin/curl -L "$SWIFTDIALOG_URL" -o "$workdir/dialog.pkg" ; then
             if ! /usr/sbin/installer -pkg "$workdir/dialog.pkg" -target / ; then
                 writelog "   [check_for_dialog_app] dialog installation failed"
             fi
@@ -164,10 +164,14 @@ open_software_update() {
     timecount=0
     while kill -0 "$suPID" 2> /dev/null; do
         sleep 1
-        # set a maximum time that Software Update can be open before invoking another dialog
+        # set a maximum time that Software Update can be open before killing System Settings and invoking another dialog
         ((timecount++))
         if [[ $timecount -ge 3600 ]]; then
-            break
+            if pgrep "System Settings"; then
+                pkill "System Settings"
+            elif pgrep "System Preferences"; then
+                pkill "System Preferences"
+            fi
         fi
     done
     if [[ $timecount -ge 3600 ]]; then

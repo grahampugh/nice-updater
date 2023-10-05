@@ -4,6 +4,13 @@
 
 No date
 
+## [2.4.1]
+
+05.10.2023
+
+- Force-close Software Settings if open after the timeout period expires.
+- Update for compatibility with swiftDialog 2.3.2.
+
 ## [2.4]
 
 23.06.2023
