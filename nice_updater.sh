@@ -166,17 +166,18 @@ open_software_update() {
         sleep 1
         # set a maximum time that Software Update can be open before killing System Settings and invoking another dialog
         ((timecount++))
-        if [[ $timecount -ge 3600 ]]; then
-            if pgrep "System Settings"; then
-                pkill "System Settings"
-            elif pgrep "System Preferences"; then
-                pkill "System Preferences"
-            fi
+        if [[ $timecount -ge 900 ]]; then
+            break
         fi
     done
-    if [[ $timecount -ge 3600 ]]; then
+    if [[ $timecount -ge 900 ]]; then
         writelog "Software Update was open too long"
         write_status "Software Update was open too long"
+        if pgrep "System Settings"; then
+            pkill "System Settings"
+        elif pgrep "System Preferences"; then
+            pkill "System Preferences"
+        fi
     else
         writelog "Software Update was closed"
         write_status "Software Update was closed"

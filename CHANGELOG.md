@@ -10,6 +10,7 @@ No date
 
 - Force-close Software Settings if open after the timeout period expires.
 - Update for compatibility with swiftDialog 2.3.2.
+- Reduce Software Update timeout from 60 to 15 minutes.
 
 ## [2.4]
 
