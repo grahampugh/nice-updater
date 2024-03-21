@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
-mainDaemonPlist="/Library/LaunchDaemons/com.github.grahampugh.nice_updater.plist"
-mainOnDemandDaemonPlist="/Library/LaunchDaemons/com.github.grahampugh.nice_updater_on_demand.plist"
-preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
+mainDaemonPlist="/Library/LaunchDaemons/com.grahamrpugh.nice_updater.plist"
+mainOnDemandDaemonPlist="/Library/LaunchDaemons/com.grahamrpugh.nice_updater_on_demand.plist"
+preferenceFileFullPath="/Library/Preferences/com.grahamrpugh.nice_updater.prefs.plist"
 
 DIR=$(dirname "$0")
 
@@ -33,4 +33,4 @@ fi
 /bin/launchctl load -w "$mainDaemonPlist"
 /bin/launchctl load -w "$mainOnDemandDaemonPlist"
 
-/bin/launchctl start com.github.grahampugh.nice_updater
+/bin/launchctl start com.grahamrpugh.nice_updater

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Nice Updater 2
-version="2.4.1"
+version="2.5.0"
 
 # These variables will be automagically updated if you run build.sh, no need to modify them
-preferenceFileFullPath="/Library/Preferences/com.github.grahampugh.nice_updater.prefs.plist"
+preferenceFileFullPath="/Library/Preferences/com.grahamrpugh.nice_updater.prefs.plist"
 
 ###### Variables below this point are not intended to be modified #####
 helperTitle=$(/usr/bin/defaults read "$preferenceFileFullPath" UpdateRequiredTitle)
@@ -26,21 +26,15 @@ dialog_app="/Library/Application Support/Dialog/Dialog.app"
 dialog_bin="/usr/local/bin/dialog"
 dialog_log=$(/usr/bin/mktemp /var/tmp/dialog.XXX)
 
-# URL for downloading dialog (with tag version)
-# This ensures a compatible dialog is used if not using the package installer
-SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.3.2/dialog-2.3.2-4726.pkg"
+## FUNCTIONS
 
-# set default icon if not included in build
-if [[ "$iconCustomPath" == "/Applications/Self Service.app" ]]; then
-    # Create temporary icon from Self Service's custom icon (thanks, @meschwartz via @dan-snelson!)
-    temp_icon_path="/var/tmp/overlayicon.icns"
-    /usr/bin/xxd -p -s 260 "$(/usr/bin/defaults read /Library/Preferences/com.jamfsoftware.jamf self_service_app_path)"/Icon$'\r'/..namedfork/rsrc | /usr/bin/xxd -r -p > "$temp_icon_path"
-    icon="$temp_icon_path"
-elif [[ "$iconCustomPath" ]]; then
-    icon="$iconCustomPath"
-else
-    icon="/System/Library/PrivateFrameworks/SoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns"
-fi
+getSwiftDialogDownloadURL() {
+    url="https://api.github.com/repos/swiftDialog/swiftDialog/releases"
+    header="Accept: application/json"
+    tag=${1:-"$(curl -sL -H "${header}" ${url}/latest | awk -F '"' '/tag_name/ { print $4; exit }')"}
+    
+    curl -sL -H "${header}" ${url}/tags/${tag} | awk -F '"' '/browser_download_url/ { print $4; exit }'
+}
 
 writelog() {
     DATE=$(date +%Y-%m-%d\ %H:%M:%S)
@@ -65,7 +59,7 @@ check_for_dialog_app() {
         writelog "   [check_for_dialog_app] dialog is installed ($dialog_app)"
     else
         writelog "   [check_for_dialog_app] Downloading swiftDialog.app..."
-        if /usr/bin/curl -L "$SWIFTDIALOG_URL" -o "$workdir/dialog.pkg" ; then
+        if /usr/bin/curl -L "$dialog_download_url" -o "$workdir/dialog.pkg" ; then
             if ! /usr/sbin/installer -pkg "$workdir/dialog.pkg" -target / ; then
                 writelog "   [check_for_dialog_app] dialog installation failed"
             fi
@@ -156,14 +150,34 @@ record_last_full_update() {
     /usr/libexec/PlistBuddy -c "Add :update_key array" $preferenceFileFullPath 2> /dev/null
 }
 
+get_system_version() {
+    system_version=$( /usr/bin/sw_vers -productVersion )
+    return "${system_version:0}"
+}
+
 open_software_update() {
-    /usr/bin/open -W /System/Library/PreferencePanes/SoftwareUpdate.prefPane &
-    suPID=$!
-    writelog "Opening Software Update with PID: $suPID"
+    open_su_helper
+    sleep 5
+    suPID=$(pgrep "System Settings")
+    writelog "Software Update open with PID: $suPID"
+
     # While Software Update is open...
     timecount=0
     while kill -0 "$suPID" 2> /dev/null; do
         sleep 1
+        # ensure system settings is in the foreground
+        /usr/bin/osascript <<APPLESCRIPT &
+-- open the System Settings Software Update pane
+try
+    -- bring the target application to the front
+    tell application "System Settings"
+        activate
+        try
+            set miniaturized of windows to false
+        end try
+    end tell
+end try
+APPLESCRIPT
         # set a maximum time that Software Update can be open before killing System Settings and invoking another dialog
         ((timecount++))
         if [[ $timecount -ge 900 ]]; then
@@ -333,6 +347,7 @@ update_check() {
         if [[ "${#updatesNoRestart[@]}" -gt 0 ]]; then
             writelog "Installing updates that DO NOT require a restart in the background..."
             /usr/sbin/softwareupdate --no-scan --install "${updatesNoRestart[@]}"
+            /usr/sbin/softwareupdate --background --include-config
         fi
 
         # If the script moves past this point, a restart is required.
@@ -373,6 +388,24 @@ main() {
     writelog " "
     writelog "======== Starting $scriptName v$version ========"
 
+    # URL for downloading dialog (with tag version)
+    # This ensures a compatible dialog is used if not using the package installer
+    swiftdialog_tag_required="v2.4.2"
+    dialog_download_url=$(getSwiftDialogDownloadURL "${swiftdialog_tag_required}")
+    echo "download url for tag version : ${dialog_download_url}"
+
+    # set default icon if not included in build
+    if [[ "$iconCustomPath" == "/Applications/Self Service.app" ]]; then
+        # Create temporary icon from Self Service's custom icon (thanks, @meschwartz via @dan-snelson!)
+        temp_icon_path="/var/tmp/overlayicon.icns"
+        /usr/bin/xxd -p -s 260 "$(/usr/bin/defaults read /Library/Preferences/com.jamfsoftware.jamf self_service_app_path)"/Icon$'\r'/..namedfork/rsrc | /usr/bin/xxd -r -p > "$temp_icon_path"
+        icon="$temp_icon_path"
+    elif [[ "$iconCustomPath" ]]; then
+        icon="$iconCustomPath"
+    else
+        icon="/System/Library/PrivateFrameworks/SoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns"
+    fi
+
     # See if we are blocking updates, if so exit
     updatesBlocked=$(/usr/libexec/PlistBuddy -c "Print :updates_blocked" $preferenceFileFullPath 2> /dev/null | xargs 2> /dev/null)
     if [[ "$updatesBlocked" == "true" ]]; then
@@ -382,7 +415,7 @@ main() {
     fi
 
     # Check the last time we had a full successful update
-    updatesAvailable=$(/usr/bin//usr/bin/defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist LastRecommendedUpdatesAvailable | /usr/bin/awk '{ if  (NF > 2) {print $1 " "  $2} else { print $0 }}')
+    updatesAvailable=$(/usr/bin/defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist LastRecommendedUpdatesAvailable | /usr/bin/awk '{ if  (NF > 2) {print $1 " "  $2} else { print $0 }}')
     if [[ "$updatesAvailable" -gt "0" ]]; then
         writelog "At least one recommended update was marked available from a previous check."
         random_delay
@@ -423,6 +456,422 @@ main() {
     fi
 
     finish 0
+}
+
+open_su_helper() {
+        /usr/bin/osascript <<APPLESCRIPT &
+# Taken from https://github.com/xirianlight/openToMoreInfo
+
+# This version of the script has multiple repeat loops at the end:
+# Loop 1 - click "More Info" to bring up the list of updates
+# Loop 2 - Click "Install Now" to begin the download/install
+# Loop 3 - Approve the EULA for the update (Ventura logic now includes Xcode SDK EULA)
+# Validated in macOS 11, 12, 13, 14, Intel & ARM
+# Note: Sonoma logic clicks the Update Now button, as the "More Info" button continues to be inoperable
+
+# Get Major OS
+set _major to system attribute "sys1"
+
+# Bailout if old version
+if _major < 11 then
+	log "Catalina or earlier detected"
+	error number -128
+end if
+
+# Sonoma
+if (_major = 14) then
+	log "Sonoma detected"
+	
+	# Launch software Update preference pane
+	do shell script "open x-apple.systempreferences:com.apple.Software-Update-Settings.extension"
+	
+	# Wait for window to open
+	tell application "System Events"
+		repeat 60 times
+			if exists (window 1 of process "System Settings") then
+				delay 3
+				exit repeat
+			else
+				delay 1
+			end if
+		end repeat
+		
+		if not (exists (window 1 of process "System Settings")) then
+			return
+		end if
+	end tell
+	
+	# Click "Update Now" or "Restart Now" if present
+	tell application "System Events"
+		tell process "System Settings"
+			repeat 60 times
+				
+				# Sonoma logic - interface now has three buttons. If 2 buttons exist, use old logic, if three exist, use new logic. 
+				
+				# 3-button logic - if button 3 exists (indicating both "Update Tonight" and "Restart Now" buttons are present) , click button 2 for "Restart Now"
+				if exists (button 3 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					click button 2 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+					exit repeat
+				end if
+				
+				# 2-button logic ("Update Now" and "More Info...")	- click "Update Now", because as of 14.1 beta 3, the "More Info" button is still not accepting synthetic click commands			
+				if exists (button 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					click button 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Settings" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				
+				delay 1
+			end repeat
+			
+			
+			# Approve EULA
+			repeat 60 times
+				
+				# Insert code here to pause if Battery warning pops
+				if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					delay 5
+					
+					# Nested loop to test for this text now being gone
+					repeat 60 times
+						if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+							delay 5
+						else
+							# The power warning is gone, starting script over
+							# This is just copying the first repeat statement of the script
+							repeat 60 times
+								
+								
+								if exists (button 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+									click button 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+									exit repeat
+								end if
+								
+								tell application "System Events"
+									if application process "System Settings" exists then
+										delay 0.5
+									else
+										exit repeat
+									end if
+								end tell
+								
+								delay 1
+							end repeat
+						end if
+						
+					end repeat #End of the battery warning loop
+					
+				end if
+				
+				# Proceed with actually agreeing to EULA
+				if exists (button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					click button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Settings" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				
+				delay 1
+			end repeat
+		end tell
+	end tell
+	
+end if
+
+# Ventura
+if (_major = 13) then
+	log "Ventura detected"
+	# New bugs in Ventura - More Info button still not actionable through 13.5.2. If Ventura detected, click Upgrade now as far as you can, BUT if macOS upgrade banner detected, just scroll to the bottom
+	
+	# Launch software Update preference pane
+	do shell script "open x-apple.systempreferences:com.apple.Software-Update-Settings.extension"
+	
+	# Wait for window to open
+	tell application "System Events"
+		repeat 60 times
+			if exists (window 1 of process "System Settings") then
+				delay 3
+				exit repeat
+			else
+				delay 1
+			end if
+		end repeat
+		
+		if not (exists (window 1 of process "System Settings")) then
+			return
+		end if
+	end tell
+	
+	# Click "Update Now" or "Restart Now" if present
+	tell application "System Events"
+		tell process "System Settings"
+			repeat 60 times
+				
+				# If macOS Banner detected along with available update, all we can do is scroll to it, we cannot click further. Do this and bail out
+				set uiElems to entire contents of group 2 of splitter group 1 of group 1 of window "Software Update"
+				#uiElems is generated as a LIST
+				
+				set var2 to "Sonoma"
+				
+				log "Now checking for Sonoma string"
+				repeat with i in uiElems
+					if class of i is static text then
+						set R to value of i
+						log "Value of static text is"
+						log R
+						if R contains "Sonoma" then
+							log "Sonoma detected"
+							set value of scroll bar 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events" to 1.0
+							display dialog "To start your update, look for the 'Other Updates Available' section we've scrolled to and click the 'More Info...' button to begin the update." with title "Click the 'More Info' button to continue" buttons {"OK"} with icon POSIX file "/System/Library/PrivateFrameworks/OAHSoftwareUpdate.framework/Versions/A/Resources/SoftwareUpdate.icns" default button {"OK"}
+							error number -128
+						end if
+					end if
+				end repeat
+				
+				# Sonoma banner not detected, executing standard logic
+				if exists (button 1 of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					click button 1 of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Settings" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				
+				delay 1
+			end repeat
+			
+			
+			# Approve EULA
+			repeat 60 times
+				
+				# Insert code here to pause if Battery warning pops
+				if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					delay 5
+					
+					# Nested loop to test for this text now being gone
+					repeat 60 times
+						if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+							delay 5
+						else
+							# The power warning is gone, starting script over
+							# This is just copying the first repeat statement of the script
+							repeat 60 times
+								# In release, buttons changed from named identifiers to numbers
+								# Commenting out this extra loop since both buttons now have same ID
+								#if exists (button "Update Now" of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+								#click button "Update Now" of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+								#exit repeat
+								#end if
+								
+								if exists (button 1 of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+									click button 1 of group 2 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Software Update" of application process "System Settings" of application "System Events"
+									exit repeat
+								end if
+								
+								tell application "System Events"
+									if application process "System Settings" exists then
+										delay 0.5
+									else
+										exit repeat
+									end if
+								end tell
+								
+								delay 1
+							end repeat
+						end if
+						
+					end repeat #End of the battery warning loop
+					
+				end if
+				
+				# Proceed with actually agreeing to EULA
+				if exists (button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+					click button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Settings" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				delay 1
+			end repeat
+			
+			# NEW: Xcode SDK Agreement - same button layout as EULA
+			# Give System Settings a few seconds to display second pane, then fire this once
+			delay 4
+			if exists (button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events") then
+				click button 2 of group 1 of sheet 1 of window "Software Update" of application process "System Settings" of application "System Events"
+			end if
+			
+			tell application "System Events"
+				if application process "System Settings" exists then
+					delay 0.5
+				end if
+			end tell
+		end tell
+	end tell
+	
+end if
+
+# Monterey and Big Sur
+if _major < 13 then
+	log "Monterey or Big Sur detected"
+	do shell script "open /System/Library/PreferencePanes/SoftwareUpdate.prefPane"
+	
+	# Launch System Preferences
+	tell application "System Events"
+		repeat 60 times
+			if exists (window 1 of process "System Preferences") then
+				exit repeat
+			else
+				delay 1
+			end if
+		end repeat
+		
+		if not (exists (window 1 of process "System Preferences")) then
+			return
+		end if
+		
+		tell application id "com.apple.systempreferences"
+			set the current pane to pane id "com.apple.preferences.softwareupdate"
+		end tell
+	end tell
+	
+	tell application "System Events"
+		tell process "System Preferences"
+			
+			# Click More Info button
+			repeat 60 times
+				if exists (button 1 of group 1 of window "Software Update") then
+					click button 1 of group 1 of window "Software Update"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Preferences" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				delay 1
+			end repeat
+			# End Click More Info button
+			# Click Install Now
+			repeat 60 times
+				if exists (button 1 of sheet 1 of window "Software Update") then
+					click button 1 of sheet 1 of window "Software Update"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Preferences" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				delay 1
+			end repeat
+			# End Click Install Now
+			
+			# Insert code here to pause if Battery warning pops
+			delay 2
+			if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events") then
+				delay 5
+				
+				# Nested loop to test for this text now being gone
+				repeat 60 times
+					if exists (static text "Please connect to power before continuing updates." of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events") then
+						delay 5
+					else
+						# The power warning is gone, starting script over
+						# This is just copying the first repeat statement of the script
+						
+						# Click More Info button
+						repeat 60 times
+							if exists (button "More Info�" of group 1 of window "Software Update" of application process "System Preferences" of application "System Events") then
+								click button "More Info�" of group 1 of window "Software Update" of application process "System Preferences" of application "System Events"
+								exit repeat
+							end if
+							# Ensure app still open
+							tell application "System Events"
+								if application process "System Preferences" exists then
+									delay 0.5
+								else
+									exit repeat
+								end if
+							end tell
+							delay 1
+						end repeat
+						# End Click More Info button
+						
+						# Click Install Now
+						repeat 60 times
+							if exists (button "Install Now" of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events") then
+								click button "Install Now" of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events"
+								exit repeat
+							end if
+							
+							tell application "System Events"
+								if application process "System Preferences" exists then
+									delay 0.5
+								else
+									exit repeat
+								end if
+							end tell
+							delay 1
+						end repeat
+						# End Click Install Now	
+					end if
+					exit repeat
+				end repeat #End of the battery warning loop
+			end if # End of battery warning if statement
+			
+			# Accept EULA
+			repeat 60 times
+				if exists (button "Agree" of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events") then
+					click button "Agree" of sheet 1 of window "Software Update" of application process "System Preferences" of application "System Events"
+					exit repeat
+				end if
+				
+				tell application "System Events"
+					if application process "System Preferences" exists then
+						delay 0.5
+					else
+						exit repeat
+					end if
+				end tell
+				
+				delay 1
+			end repeat
+		end tell
+	end tell
+	
+end if
+APPLESCRIPT
 }
 
 "$@"

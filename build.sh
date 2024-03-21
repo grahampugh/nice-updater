@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # The main identifier which everything hinges on
-identifier="com.github.grahampugh.nice_updater"
+identifier="com.grahamrpugh.nice_updater"
 
 # Default version of the build, you can leave this alone and specify as an argument like so: ./build.sh 1.7
-version="2.4.1"
+version="2.5.0"
 
 # The title of the message that is displayed when software updates are in progress and a user is logged in
 updateRequiredTitle="macOS Software Updates Required"
@@ -38,7 +38,8 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
-SWIFTDIALOG_URL="https://github.com/bartreardon/swiftDialog/releases/download/v2.3.2/dialog-2.3.2-4726.pkg"
+swiftdialog_tag_required="v2.4.2"
+
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
 mainDaemonFileName="${mainDaemonPlist##*/}"
 mainOnDemandDaemonPlist="/Library/LaunchDaemons/${identifier}_on_demand.plist"
@@ -47,6 +48,14 @@ onDemandDaemonIdentifier="${identifier}_on_demand"
 watchPathsPlist="/Library/Preferences/${identifier}.trigger.plist"
 preferenceFileFullPath="/Library/Preferences/${identifier}.prefs.plist"
 preferenceFileName="${preferenceFileFullPath##*/}"
+
+getSwiftDialogDownloadURL() {
+    url="https://api.github.com/repos/swiftDialog/swiftDialog/releases"
+    header="Accept: application/json"
+    tag=${1:-"$(curl -sL -H "${header}" ${url}/latest | awk -F '"' '/tag_name/ { print $4; exit }')"}
+    
+    curl -sL -H "${header}" ${url}/tags/${tag} | awk -F '"' '/browser_download_url/ { print $4; exit }'
+}
 
 if [[ -n "$1" ]]; then
     version="$1"
@@ -121,7 +130,7 @@ chmod +x /private/tmp/nice_updater/scripts/preinstall
 cp "$PWD/postinstall.sh" /private/tmp/nice_updater/scripts/postinstall
 chmod +x /private/tmp/nice_updater/scripts/postinstall
 
-# Put the main script and uninstaller in place
+# Put the scripts in place
 cp "$PWD/nice_updater.sh" /private/tmp/nice_updater/files/Library/Scripts/nice_updater.sh
 cp "$PWD/nice_updater_uninstall.sh" /private/tmp/nice_updater/files/Library/Scripts/nice_updater_uninstall.sh
 
@@ -142,7 +151,10 @@ cp "$PWD/$onDemandDaemonFileName" "/private/tmp/nice_updater/files/Library/Launc
 cp "$PWD/$preferenceFileName" "/private/tmp/nice_updater/files/Library/Preferences/"
 
 # Download and copy swiftDialog into the temp build directory
-curl -L "$SWIFTDIALOG_URL" -o "/private/tmp/nice_updater/scripts/dialog.pkg"
+dialog_download_url=$(getSwiftDialogDownloadURL "${swiftdialog_tag_required}")
+echo "download url for tag version : ${dialog_download_url}"
+echo "Downloading swiftDialog from $dialog_download_url"
+curl -L "$dialog_download_url" -o "/private/tmp/nice_updater/scripts/dialog.pkg"
 
 # Remove any unwanted .DS_Store files from the temp build directory
 find "/private/tmp/nice_updater/" -name '*.DS_Store' -type f -delete

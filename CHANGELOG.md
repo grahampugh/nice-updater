@@ -4,11 +4,20 @@
 
 No date
 
+## [2.5.0]
+
+21.03.2023
+
+- Use applescript from [xirianlight/openToMoreInfo](https://github.com/xirianlight/openToMoreInfo) to open System Settings.
+- System Settings is brought back to the foreground if users click to another app (seems to work for all apps excdept Terminal).
+- Changed identifiers to `com.grahamrpugh`.
+- Update for compatibility with swiftDialog 2.4.2.
+
 ## [2.4.1]
 
 05.10.2023
 
-- Force-close Software Settings if open after the timeout period expires.
+- Force-close System Settings if open after the timeout period expires.
 - Update for compatibility with swiftDialog 2.3.2.
 - Reduce Software Update timeout from 60 to 15 minutes.
 
