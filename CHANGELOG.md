@@ -6,10 +6,10 @@ No date
 
 ## [2.5.0]
 
-21.03.2023
+21.03.2024
 
 - Use applescript from [xirianlight/openToMoreInfo](https://github.com/xirianlight/openToMoreInfo) to open System Settings.
-- System Settings is brought back to the foreground if users click to another app (seems to work for all apps excdept Terminal).
+- System Settings is brought back to the foreground if users click to another app (seems to work for all apps except Terminal).
 - Changed identifiers to `com.grahamrpugh`.
 - Update for compatibility with swiftDialog 2.4.2.
 
