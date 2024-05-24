@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # The main identifier which everything hinges on
-identifier="com.github.grahampugh.nice_updater"
+identifier="com.grahamrpugh.nice_updater"
 
 # The location of your log, keep in mind that if you nest the log into a folder that does not exist you'll need to mkdir -p the directory as well
 log="/Library/Logs/Nice_Updater.log"
