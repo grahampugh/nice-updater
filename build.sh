@@ -38,6 +38,7 @@ startIntervalMinute="0"  # valid is 0-59. Do not leave blank - set as 0
 alertTimeout="3540"
 
 ###### Variables below this point are not intended to be modified #####
+
 swiftdialog_tag_required="v2.4.2"
 
 mainDaemonPlist="/Library/LaunchDaemons/${identifier}.plist"
@@ -54,7 +55,7 @@ getSwiftDialogDownloadURL() {
     header="Accept: application/json"
     tag=${1:-"$(curl -sL -H "${header}" ${url}/latest | awk -F '"' '/tag_name/ { print $4; exit }')"}
     
-    curl -sL -H "${header}" ${url}/tags/${tag} | awk -F '"' '/browser_download_url/ { print $4; exit }'
+    curl -sL -H "${header}" "${url}/tags/${tag}" | awk -F '"' '/browser_download_url/ { print $4; exit }'
 }
 
 if [[ -n "$1" ]]; then
@@ -66,15 +67,15 @@ fi
 
 # Update the variables in the various files of the project
 # If you know of a more elegant/efficient way to do this please create a PR
-sed -i '' "s#mainDaemonPlist=.*#mainDaemonPlist=\"$mainDaemonPlist\"#" "$PWD/postinstall.sh"
-sed -i '' "s#mainDaemonPlist=.*#mainDaemonPlist=\"$mainDaemonPlist\"#" "$PWD/preinstall.sh"
-sed -i '' "s#mainOnDemandDaemonPlist=.*#mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"#" "$PWD/postinstall.sh"
-sed -i '' "s#mainOnDemandDaemonPlist=.*#mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"#" "$PWD/preinstall.sh"
-sed -i '' "s#mainOnDemandDaemonPlist=.*#mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"#" "$PWD/nice_updater.sh"
-sed -i '' "s#watchPathsPlist=.*#watchPathsPlist=\"$watchPathsPlist\"#" "$PWD/preinstall.sh"
-sed -i '' "s#watchPathsPlist=.*#watchPathsPlist=\"$watchPathsPlist\"#" "$PWD/nice_updater.sh"
-sed -i '' "s#preferenceFileFullPath=.*#preferenceFileFullPath=\"$preferenceFileFullPath\"#" "$PWD/postinstall.sh"
-sed -i '' "s#preferenceFileFullPath=.*#preferenceFileFullPath=\"$preferenceFileFullPath\"#" "$PWD/nice_updater.sh"
+sed -i '' "s|mainDaemonPlist=.*|mainDaemonPlist=\"$mainDaemonPlist\"|" "$PWD/postinstall.sh"
+sed -i '' "s|mainDaemonPlist=.*|mainDaemonPlist=\"$mainDaemonPlist\"|" "$PWD/preinstall.sh"
+sed -i '' "s|mainOnDemandDaemonPlist=.*|mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"|" "$PWD/postinstall.sh"
+sed -i '' "s|mainOnDemandDaemonPlist=.*|mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"|" "$PWD/preinstall.sh"
+sed -i '' "s|mainOnDemandDaemonPlist=.*|mainOnDemandDaemonPlist=\"$mainOnDemandDaemonPlist\"|" "$PWD/nice_updater.sh"
+sed -i '' "s|watchPathsPlist=.*|watchPathsPlist=\"$watchPathsPlist\"|" "$PWD/preinstall.sh"
+sed -i '' "s|watchPathsPlist=.*|watchPathsPlist=\"$watchPathsPlist\"|" "$PWD/nice_updater.sh"
+sed -i '' "s|preferenceFileFullPath=.*|preferenceFileFullPath=\"$preferenceFileFullPath\"|" "$PWD/postinstall.sh"
+sed -i '' "s|preferenceFileFullPath=.*|preferenceFileFullPath=\"$preferenceFileFullPath\"|" "$PWD/nice_updater.sh"
 
 # Create clean temp build directories
 find /private/tmp/nice_updater -mindepth 1 -delete &> /dev/null
